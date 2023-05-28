@@ -1,0 +1,10 @@
+
+dependencies.txt
+*obj/*
+*bin/*
+*.o
+
+# Ignore the build directory
+*.vs/
+*x64/
+

@@ -1,0 +1,28 @@
+
+CC = gcc
+ALL_FLAGS = -Wall -Wextra -Wpedantic -Werror -O3 -lm -lpthread
+COMPILER_FLAGS = -Wall -Wextra -Wpedantic -Werror -O3
+
+all: objects programs
+
+objects:
+	@echo ""
+	@echo "Compiling the source files..."
+	@echo "|"
+	$(CC) -c "src/file_watcher.c" -o "obj/file_watcher.o" $(COMPILER_FLAGS) 
+	$(CC) -c "src/utils.c" -o "obj/utils.o" $(COMPILER_FLAGS) 
+	@echo ""
+	@echo ""
+	@echo ""
+	@echo "Compiling the programs..."
+	@echo "- watch_files.exe..."
+	@$(CC) -o "bin/watch_files.exe" "programs/watch_files.c" "obj/file_watcher.o" "obj/utils.o" $(ALL_FLAGS)
+	@echo "Compilation done"
+	@echo ""
+
+clean:
+	@echo "Cleaning the project..."
+	@$(foreach file, $(shell powershell -Command 'Get-ChildItem -Path obj -Filter *.o -Recurse | ForEach-Object {Resolve-Path (Join-Path $$_.DirectoryName $$_.Name) -Relative} | ForEach-Object { $$_.Replace("\", "/") } '), rm -f $(file);)
+	@$(foreach file, $(shell powershell -Command 'Get-ChildItem -Path bin -Filter *.exe -Recurse | ForEach-Object {Resolve-Path (Join-Path $$_.DirectoryName $$_.Name) -Relative} | ForEach-Object { $$_.Replace("\", "/") } '), rm -f $(file);)
+	@echo "Clean done"
+
