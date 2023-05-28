@@ -45,7 +45,7 @@
 void mainInit(char* header);
 int writeEntireFile(char* path, char* content, int size, int mode);
 char* readEntireFile(char* path);
-
+int get_line_from_file(char **lineptr, int fd);
 
 #endif
 

@@ -103,5 +103,58 @@ char* readEntireFile(char* path) {
 	return buffer;
 }
 
+char get_line_buffer[16384];
 
+/**
+ * @brief Function that reads a line from a file with a limit of 16384 characters.
+ * 
+ * @param lineptr	Pointer to the line read to be filled.
+ * @param n			Size of the line read.
+ * @param fd		File descriptor of the file to read.
+ * 
+ * @return int		0 if the line is read, -1 if the end of the file is reached.
+*/
+int get_line_from_file(char **lineptr, int fd) {
+
+	// Variables
+	memset(get_line_buffer, '\0', sizeof(get_line_buffer));
+	int i = 0;
+	char c;
+
+	// Read the file character by character
+	while (read(fd, &c, 1 * sizeof(char)) > 0) {
+
+		// If the character is a \n, break the loop
+		if (c == '\n') {
+
+			// If i == 0 and the character is a \n, it means that the line is just a \n so we continue
+			if (i == 0)
+				continue;
+
+			// Break
+			break;
+		}
+
+		// Add the character to the buffer and continue
+		get_line_buffer[i] = c;
+		i++;
+	}
+
+	// If the buffer is empty, return -1 (end of file)
+	if (i == 0)
+		return -1;
+
+	// Add the \0 at the end of the buffer
+	get_line_buffer[i] = '\0';
+
+	// If the lineptr is NULL, allocate it
+	if (*lineptr == NULL)
+		ERROR_HANDLE_PTR_RETURN_INT((*lineptr = malloc(i + 1)), "get_line_from_file(): Unable to allocate the lineptr.\n");
+
+	// Copy the buffer to the lineptr
+	strcpy(*lineptr, get_line_buffer);
+
+	// Return success
+	return 0;
+}
 

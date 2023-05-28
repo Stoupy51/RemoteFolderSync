@@ -20,8 +20,14 @@
 #define PROGRAMS_FOLDER "programs"
 #define MAKEFILE_NAME "generated_makefile"
 
+#ifdef _WIN32
+	#define WINDOWS_FLAGS " -lws2_32"
+#else
+	#define WINDOWS_FLAGS ""
+#endif
+
 #define CC "gcc"
-#define LINKER_FLAGS "-lm -lpthread"
+#define LINKER_FLAGS "-lm -lpthread" WINDOWS_FLAGS
 #define COMPILER_FLAGS "-Wall -Wextra -Wpedantic -Werror -O3"
 #define ALL_FLAGS COMPILER_FLAGS " " LINKER_FLAGS
 
