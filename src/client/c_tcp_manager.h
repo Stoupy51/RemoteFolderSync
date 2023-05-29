@@ -13,6 +13,7 @@ typedef struct {
 
 	SOCKET socket;
 	pthread_t thread;
+	pthread_mutex_t mutex;
 
 	struct sockaddr_in address;
 
@@ -25,6 +26,10 @@ thread_return_type tcp_client_thread(thread_param_type arg);
 
 // Internal functions prototypes
 int getAllDirectoryFiles();
+int on_client_file_created(const char *filepath);
+int on_client_file_modified(const char *filepath);
+int on_client_file_deleted(const char *filepath);
+int on_client_file_renamed(const char *filepath_old, const char *filepath_new);
 
 #endif
 

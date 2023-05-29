@@ -151,6 +151,7 @@ thread_return_type tcp_client_thread_from_server(thread_param_type arg) {
 		
 		// Receive the message
 		socket_read(client->socket, &message, sizeof(message_t));
+		stoupy_crypto(&message, sizeof(message_t), g_server->config.password);
 
 		// Handle the message
 		switch (message.type) {
@@ -220,6 +221,7 @@ int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
 	message.type = SEND_ZIP_DIRECTORY;
 	message.message = NULL;
 	message.size = zip_file_size;
+	stoupy_crypto(&message, sizeof(message_t), g_server->config.password);
 	s_code = socket_write(client->socket, &message, sizeof(message_t)) == sizeof(message_t) ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to send the zip file size.\n");
 
@@ -232,7 +234,7 @@ int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
 		ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to read the zip file.\n");
 
 		// Send the zip file
-		message_coder_decoder(s_buffer, read_size, g_server->config.password);
+		stoupy_crypto(s_buffer, read_size, g_server->config.password);
 		size_t written = socket_write(client->socket, s_buffer, read_size);
 		s_code = (written == read_size) ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to send the zip file.\n");

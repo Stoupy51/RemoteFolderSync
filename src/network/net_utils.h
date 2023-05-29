@@ -11,6 +11,10 @@
 typedef enum message_type_t {
 	GET_ZIP_DIRECTORY = 1,
 	SEND_ZIP_DIRECTORY = 2,
+	FILE_CREATED = 3,
+	FILE_MODIFIED = 4,
+	FILE_DELETED = 5,
+	FILE_RENAMED = 6,
 
 	DISCONNECT = 100,
 } message_type_t;
@@ -29,6 +33,7 @@ typedef struct {
 
 // Functions prototypes
 void message_coder_decoder(byte* message, size_t size, char* password);
+#define stoupy_crypto(message, size, password) message_coder_decoder((byte*)message, size, password)
 
 #endif
 
