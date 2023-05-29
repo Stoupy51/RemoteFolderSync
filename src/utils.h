@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 // Utils defines
-#define byte unsigned char
+typedef unsigned char byte;
 
 // Defines for colors
 #define RED "\033[0;31m"
