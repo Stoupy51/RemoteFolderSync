@@ -11,7 +11,7 @@
  * 
  * @return void
  */
-void message_coder_decoder(byte* message, size_t size, byte* password) {
+void message_coder_decoder(byte* message, size_t size, char* password) {
 	size_t i;
 	for (i = 0; i < size; i++)
 		message[i] ^= password[i % PASSWORD_SIZE];

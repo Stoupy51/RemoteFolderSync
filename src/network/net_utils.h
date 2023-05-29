@@ -28,7 +28,7 @@ typedef struct {
 } message_t;
 
 // Functions prototypes
-void message_coder_decoder(byte* message, size_t size, byte* password);
+void message_coder_decoder(byte* message, size_t size, char* password);
 
 #endif
 

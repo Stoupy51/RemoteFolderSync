@@ -149,17 +149,18 @@ int getAllDirectoryFiles() {
 	while (received_bytes < message.size) {
 
 		// Read the socket into the c_buffer
-		size_t read_count = socket_read(g_client->socket, c_buffer, sizeof(c_buffer));
-		c_code = read_count > 0 ? 0 : -1;
+		size_t read_size = socket_read(g_client->socket, c_buffer, sizeof(c_buffer));
+		c_code = read_size > 0 ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to receive the zip file.\n");
+		message_coder_decoder(c_buffer, read_size, g_client->config.password);
 
 		// Write the c_buffer into the file
-		bytes = fwrite(c_buffer, sizeof(byte), read_count, fd);
-		c_code = bytes == read_count ? 0 : -1;
+		bytes = fwrite(c_buffer, sizeof(byte), read_size, fd);
+		c_code = bytes == read_size ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to write the zip file.\n");
 
 		// Update the received bytes
-		received_bytes += read_count;
+		received_bytes += read_size;
 	}
 
 	// Close the zip file

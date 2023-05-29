@@ -232,6 +232,7 @@ int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
 		ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to read the zip file.\n");
 
 		// Send the zip file
+		message_coder_decoder(s_buffer, read_size, g_server->config.password);
 		size_t written = socket_write(client->socket, s_buffer, read_size);
 		s_code = (written == read_size) ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to send the zip file.\n");
