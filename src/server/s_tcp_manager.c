@@ -128,7 +128,7 @@ thread_return_type tcp_server_thread(thread_param_type arg) {
 	}
 
 	// Close the socket and return
-	close(g_server->socket);
+	socket_close(g_server->socket);
 	return 0;
 }
 
@@ -150,9 +150,7 @@ thread_return_type tcp_client_thread_from_server(thread_param_type arg) {
 	while (client->socket != 0) {
 		
 		// Receive the message
-		size_t read_size = read(client->socket, &message, sizeof(message_t));
-		s_code = read_size == 0 ? -1 : 0;
-		ERROR_HANDLE_INT_RETURN_INT(s_code, "tcp_client_thread(): Unable to read the message.\n");
+		socket_read(client->socket, &message, sizeof(message_t));
 
 		// Handle the message
 		switch (message.type) {
@@ -161,9 +159,19 @@ thread_return_type tcp_client_thread_from_server(thread_param_type arg) {
 				INFO_PRINT("tcp_client_thread(): GET_ZIP_DIRECTORY message received.\n");
 				sendAllDirectoryFiles(client);
 				break;
+			
+			case DISCONNECT:
+				INFO_PRINT("tcp_client_thread(): DISCONNECT message received.\n");
+				s_code = socket_close(client->socket);
+				ERROR_HANDLE_INT_RETURN_INT(s_code, "tcp_client_thread(): Unable to close the socket.\n");
+				client->socket = 0;
+				break;
 
 			default:
-				INFO_PRINT("tcp_client_thread(): Unknown message type %d.\n", message.type);
+				ERROR_PRINT("tcp_client_thread(): Unknown message type %d.\n", message.type);
+				s_code = socket_close(client->socket);
+				ERROR_HANDLE_INT_RETURN_INT(s_code, "tcp_client_thread(): Unable to close the socket.\n");
+				client->socket = 0;
 				break;
 		}
 
@@ -185,11 +193,13 @@ thread_return_type tcp_client_thread_from_server(thread_param_type arg) {
  */
 int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
 
-	// Variables
-
 	// Create the zip file
 	char command[1024];
-	sprintf(command, "zip -r '%s' '%s'", ZIP_TEMPORARY_FILE, g_server->config.directory);
+	#ifdef _WIN32
+		sprintf(command, "powershell -Command \"Compress-Archive -Path '%s*' -DestinationPath '%s' -Force\"", g_server->config.directory, ZIP_TEMPORARY_FILE);
+	#else
+		sprintf(command, "zip -r '%s' '%s*'", ZIP_TEMPORARY_FILE, g_server->config.directory);
+	#endif
 	s_code = system(command);
 	ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to create the zip file.\n");
 
@@ -210,7 +220,7 @@ int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
 	message.type = SEND_ZIP_DIRECTORY;
 	message.message = NULL;
 	message.size = zip_file_size;
-	s_code = write(client->socket, &message, sizeof(message_t)) == sizeof(message_t) ? 0 : -1;
+	s_code = socket_write(client->socket, &message, sizeof(message_t)) == sizeof(message_t) ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to send the zip file size.\n");
 
 	// Send the zip file
@@ -222,7 +232,7 @@ int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
 		ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to read the zip file.\n");
 
 		// Send the zip file
-		size_t written = write(client->socket, s_buffer, read_size);
+		size_t written = socket_write(client->socket, s_buffer, read_size);
 		s_code = (written == read_size) ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to send the zip file.\n");
 
@@ -235,8 +245,8 @@ int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
 	ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to close the zip file.\n");
 
 	// Delete the zip file
-	// s_code = remove(ZIP_TEMPORARY_FILE);
-	// ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to delete the zip file.\n");
+	s_code = remove(ZIP_TEMPORARY_FILE);
+	ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to delete the zip file.\n");
 
 	// Return
 	return 0;

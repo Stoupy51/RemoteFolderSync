@@ -11,6 +11,8 @@
 typedef enum message_type_t {
 	GET_ZIP_DIRECTORY = 1,
 	SEND_ZIP_DIRECTORY = 2,
+
+	DISCONNECT = 100,
 } message_type_t;
 
 // Structure for exchanging messages between client and server

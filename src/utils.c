@@ -15,6 +15,12 @@
 */
 void mainInit(char* header) {
 
+	// Launch empty powershell command on Windows,
+	// it's a trick to get ANSI colors in every terminal for Windows 10
+	#ifdef _WIN32
+		system("powershell -command \"\"");
+	#endif
+
 	// Print the header
 	printf("\n---------------------------\n");
 	INFO_PRINT("%s", header);

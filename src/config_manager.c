@@ -52,6 +52,10 @@ config_t read_config_file() {
 		// Check if the key is directory
 		if (strcmp(key, "directory") == 0) {
 			strcpy(config.directory, value);
+			int len = strlen(config.directory) - 1;
+			for (; len >= 0; len--)
+				if (config.directory[len] == '\\')
+					config.directory[len] = '/';
 		}
 
 		// Check if the key is password

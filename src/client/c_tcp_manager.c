@@ -93,13 +93,20 @@ thread_return_type tcp_client_thread(thread_param_type arg) {
 	ERROR_HANDLE_INT_RETURN_INT(c_code, "tcp_client_thread(): Invalid parameters, 'arg' should be NULL.\n");
 
 	// Variables
-	//message_t message;
+	message_t message;
 
 	// Get directory files
 	getAllDirectoryFiles();
 
+	// Disconnect from the server
+	message.type = DISCONNECT;
+	message.message = NULL;
+	message.size = 0;
+	c_code = socket_write(g_client->socket, (char*)&message, sizeof(message_t)) > 0 ? 0 : -1;
+	ERROR_HANDLE_INT_RETURN_INT(c_code, "tcp_client_thread(): Unable to send the message.\n");
+
 	// Close the socket and return
-	close(g_client->socket);
+	socket_close(g_client->socket);
 	return 0;
 }
 
@@ -119,12 +126,12 @@ int getAllDirectoryFiles() {
 	size_t bytes = 0;
 
 	// Send the message through the socket
-	bytes = write(g_client->socket, (char*)&message, sizeof(message_t));
+	bytes = socket_write(g_client->socket, (char*)&message, sizeof(message_t));
 	c_code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to send the message.\n");
 
 	// Receive the message through the socket
-	bytes = read(g_client->socket, (char*)&message, sizeof(message_t));
+	bytes = socket_read(g_client->socket, (char*)&message, sizeof(message_t));
 	c_code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to receive the message.\n");
 
@@ -142,7 +149,7 @@ int getAllDirectoryFiles() {
 	while (received_bytes < message.size) {
 
 		// Read the socket into the c_buffer
-		size_t read_count = read(g_client->socket, c_buffer, sizeof(c_buffer));
+		size_t read_count = socket_read(g_client->socket, c_buffer, sizeof(c_buffer));
 		c_code = read_count > 0 ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to receive the zip file.\n");
 
@@ -161,14 +168,17 @@ int getAllDirectoryFiles() {
 
 	// Unzip the zip file into the directory using system()
 	char command[1024];
-	sprintf(command, "unzip -o '%s' -d '%s'", ZIP_TEMPORARY_FILE, g_client->config.directory);
-	printf("Command: %s\n", command);
-	//c_code = system(command);
-	//ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to unzip the zip file.\n");
+	#ifdef _WIN32
+		sprintf(command, "powershell -Command \"Expand-Archive -Path '%s' -DestinationPath '%s' -Force\"", ZIP_TEMPORARY_FILE, g_client->config.directory);
+	#else
+		sprintf(command, "unzip -o '%s' -d '%s'", ZIP_TEMPORARY_FILE, g_client->config.directory);
+	#endif
+	c_code = system(command);
+	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to unzip the zip file.\n");
 
 	// Remove the zip file
-	//c_code = remove(ZIP_TEMPORARY_FILE);
-	//ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to remove the zip file.\n");
+	c_code = remove(ZIP_TEMPORARY_FILE);
+	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to remove the zip file.\n");
 
 	// Return
 	return 0;
