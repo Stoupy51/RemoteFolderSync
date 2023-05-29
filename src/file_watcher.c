@@ -44,7 +44,7 @@ int monitor_directory(const char *directory_path, file_created_handler file_crea
 	INFO_PRINT("Monitoring directory: %s\n", directory_path);
 
 	// Preparations
-	char buffer[1024];
+	byte buffer[1024];
 	DWORD bytesReturned;
 
 	// Filepath buffers
@@ -157,14 +157,14 @@ int monitor_directory(const char *directory_path, file_created_handler file_crea
 	INFO_PRINT("Monitoring directory: %s\n", directory_path);
 
 	// Prepare the buffer
-	char buffer[WATCH_BUFFER_SIZE];
+	byte buffer[WATCH_BUFFER_SIZE];
 	size_t bytesRead;
 
 	// Read the events
 	while ((bytesRead = read(fd, buffer, WATCH_BUFFER_SIZE)) > 0) {
 
 		// For each event in the buffer (there can be multiple events in the buffer)
-		char *ptr = buffer;
+		byte *ptr = buffer;
 		while (ptr < (buffer + bytesRead)) {
 
 			// Get the event from the buffer

@@ -94,7 +94,7 @@ thread_return_type tcp_server_thread(thread_param_type arg) {
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
 	int client_socket;
-	//char buffer[1024];
+	//byte buffer[1024];
 
 	// Accept connections
 	while (code == 0) {

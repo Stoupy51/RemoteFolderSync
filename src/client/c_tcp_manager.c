@@ -84,7 +84,7 @@ thread_return_type tcp_client_thread(thread_param_type arg) {
 	// Variables
 	//int code = 0;
 	tcp_client_t *tcp_client = (tcp_client_t *)arg;
-	//char buffer[1024];
+	//byte buffer[1024];
 
 	// Do nothing for now
 

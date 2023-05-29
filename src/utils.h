@@ -4,6 +4,9 @@
 
 #include <stdio.h>
 
+// Utils defines
+#define byte unsigned char
+
 // Defines for colors
 #define RED "\033[0;31m"
 #define GREEN "\033[0;32m"
