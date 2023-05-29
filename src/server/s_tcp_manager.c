@@ -40,6 +40,9 @@ int setup_tcp_server(config_t config, tcp_server_t *tcp_server) {
 	}
 
 	#endif
+
+	// Init mutex
+	pthread_mutex_init(&tcp_server->mutex, NULL);
 	
 	// Create the TCP socket
 	tcp_server->socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -168,7 +171,8 @@ thread_return_type tcp_client_thread_from_server(thread_param_type arg) {
 			
 			case FILE_CREATED:
 				INFO_PRINT("tcp_client_thread(): FILE_CREATED message received.\n");
-				receive_file_from_client(client, &message);
+				s_code = receive_file_from_client(client, &message);
+				ERROR_HANDLE_INT_RETURN_INT(s_code, "tcp_client_thread(): Unable to receive the file from the client.\n");
 				break;
 			
 			case DISCONNECT:
@@ -276,6 +280,8 @@ int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
  * @return int		0 if the file was received successfully, -1 otherwise.
  */
 int receive_file_from_client(tcp_client_from_server_t *client, message_t *message) {
+
+	// TODO : check crash reason
 
 	// Lock the mutex
 	pthread_mutex_lock(&g_server->mutex);

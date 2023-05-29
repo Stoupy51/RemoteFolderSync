@@ -41,6 +41,9 @@ int setup_tcp_client(config_t config, tcp_client_t *tcp_client) {
 	}
 
 	#endif
+
+	// Init mutex
+	pthread_mutex_init(&tcp_client->mutex, NULL);
 	
 	// Create the TCP socket
 	tcp_client->socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
