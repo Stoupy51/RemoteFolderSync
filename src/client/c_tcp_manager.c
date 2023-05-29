@@ -115,17 +115,22 @@ int getAllDirectoryFiles() {
 	message.message = NULL;
 	message.size = 0;
 
+	// Variables
+	size_t bytes = 0;
+
 	// Send the message through the socket
-	c_code = write(g_client->socket, (byte*)&message, sizeof(message_t));
+	bytes = write(g_client->socket, (char*)&message, sizeof(message_t));
+	c_code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to send the message.\n");
 
 	// Receive the message through the socket
-	c_code = read(g_client->socket, (byte*)&message, sizeof(message_t));
+	bytes = read(g_client->socket, (char*)&message, sizeof(message_t));
+	c_code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to receive the message.\n");
 
 	// Check the message type
 	c_code = message.type == SEND_ZIP_DIRECTORY ? 0 : -1;
-	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Invalid message type.\n");
+	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Invalid message type received : %d.\n", message.type);
 
 	///// Receive the zip file
 	// Open the zip file
@@ -142,8 +147,8 @@ int getAllDirectoryFiles() {
 		ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to receive the zip file.\n");
 
 		// Write the c_buffer into the file
-		size_t write_count = fwrite(c_buffer, sizeof(byte), read_count, fd);
-		c_code = write_count == read_count ? 0 : -1;
+		bytes = fwrite(c_buffer, sizeof(byte), read_count, fd);
+		c_code = bytes == read_count ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to write the zip file.\n");
 
 		// Update the received bytes
