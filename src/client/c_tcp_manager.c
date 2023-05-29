@@ -67,8 +67,10 @@ int setup_tcp_client(config_t config, tcp_client_t *tcp_client) {
  * @brief Function that runs the TCP client.
  * 
  * @param tcp_client The TCP client structure.
+ * 
+ * @return int		0 if the client ended successfully, -1 otherwise.
  */
-void tcp_client_run(tcp_client_t *tcp_client) {
+int tcp_client_run(tcp_client_t *tcp_client) {
 
 	// Copy to the global variable
 	g_client = tcp_client;
@@ -88,6 +90,9 @@ void tcp_client_run(tcp_client_t *tcp_client) {
 
 	// Wait for the thread to end
 	pthread_join(tcp_client->thread, NULL);
+
+	// Return
+	return 0;
 }
 
 /**
@@ -115,7 +120,7 @@ thread_return_type tcp_client_thread(thread_param_type arg) {
 	message.type = DISCONNECT;
 	message.message = NULL;
 	message.size = 0;
-	stoupy_crypto(&message, sizeof(message_t), g_client->config.password);
+	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
 	c_code = socket_write(g_client->socket, &message, sizeof(message_t)) > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(c_code, "tcp_client_thread(): Unable to send the message.\n");
 
@@ -127,6 +132,8 @@ thread_return_type tcp_client_thread(thread_param_type arg) {
 /**
  * @brief Function that gets all the files in the directory from the server.
  * It requests a zip file, and then unzips it.
+ * 
+ * @return int		0 if the function ended successfully, -1 otherwise.
  */
 int getAllDirectoryFiles() {
 
@@ -140,14 +147,14 @@ int getAllDirectoryFiles() {
 	size_t bytes = 0;
 
 	// Send the message through the socket
-	stoupy_crypto(&message, sizeof(message_t), g_client->config.password);
+	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
 	bytes = socket_write(g_client->socket, &message, sizeof(message_t));
 	c_code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to send the message.\n");
 
 	// Receive the message through the socket
 	bytes = socket_read(g_client->socket, &message, sizeof(message_t));
-	stoupy_crypto(&message, sizeof(message_t), g_client->config.password);
+	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
 	c_code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to receive the message.\n");
 
@@ -166,7 +173,7 @@ int getAllDirectoryFiles() {
 
 		// Read the socket into the c_buffer
 		size_t read_size = socket_read(g_client->socket, c_buffer, sizeof(c_buffer));
-		stoupy_crypto(c_buffer, read_size, g_client->config.password);
+		STOUPY_CRYPTO(c_buffer, read_size, g_client->config.password);
 		c_code = read_size > 0 ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to receive the zip file.\n");
 
@@ -218,7 +225,7 @@ int on_client_file_created(const char *filepath) {
 
 	// Copy the filepath into the c_buffer
 	memcpy(c_buffer, filepath, filepath_size);
-	stoupy_crypto(c_buffer, filepath_size, g_client->config.password);
+	STOUPY_CRYPTO(c_buffer, filepath_size, g_client->config.password);
 
 	// Create the message
 	message_t message;
@@ -228,7 +235,7 @@ int on_client_file_created(const char *filepath) {
 	message.size = filepath_size;
 
 	// Send the message through the socket
-	stoupy_crypto(&message, sizeof(message_t), g_client->config.password);
+	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
 	size_t bytes = socket_write(g_client->socket, &message, sizeof(message_t));
 	code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_created(): Unable to send the message.\n");
@@ -246,7 +253,7 @@ int on_client_file_created(const char *filepath) {
 	size_t file_size = lseek(fd, 0, SEEK_END);
 	lseek(fd, 0, SEEK_SET);
 	size_t file_size_crypted = file_size;
-	stoupy_crypto(&file_size_crypted, sizeof(size_t), g_client->config.password);
+	STOUPY_CRYPTO(&file_size_crypted, sizeof(size_t), g_client->config.password);
 	bytes = socket_write(g_client->socket, &file_size_crypted, sizeof(size_t));
 	code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_created(): Unable to send the file size.\n");
@@ -261,7 +268,7 @@ int on_client_file_created(const char *filepath) {
 		ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_created(): Unable to read the file.\n");
 
 		// Write the c_buffer into the socket
-		stoupy_crypto(c_buffer, read_bytes, g_client->config.password);
+		STOUPY_CRYPTO(c_buffer, read_bytes, g_client->config.password);
 		bytes = socket_write(g_client->socket, c_buffer, read_bytes);
 		code = bytes > 0 ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_created(): Unable to send the file.\n");

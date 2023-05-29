@@ -27,9 +27,10 @@ typedef struct tcp_server_t {
 	// Configuration
 	config_t config;
 
-	// Server socket and thread
+	// Server socket, thread and mutex
 	SOCKET socket;
 	pthread_t thread;
+	pthread_mutex_t mutex;
 
 	// Clients
 	int clients_count;
@@ -39,12 +40,13 @@ typedef struct tcp_server_t {
 
 // Function Prototypes
 int setup_tcp_server(config_t config, tcp_server_t *tcp_server);
-void tcp_server_run(tcp_server_t *tcp_server);
+int tcp_server_run(tcp_server_t *tcp_server);
 thread_return_type tcp_server_thread(thread_param_type arg);
 thread_return_type tcp_client_thread_from_server(thread_param_type arg);
 
 // Internal functions prototypes
 int sendAllDirectoryFiles(tcp_client_from_server_t *client);
+int receive_file_from_client(tcp_client_from_server_t *client, message_t *message);
 
 
 #endif

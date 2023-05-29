@@ -76,8 +76,10 @@ int setup_tcp_server(config_t config, tcp_server_t *tcp_server) {
  * @brief Function that runs the TCP server.
  * 
  * @param tcp_server The TCP server structure.
+ * 
+ * @return int		0 if the server ended successfully, -1 otherwise.
  */
-void tcp_server_run(tcp_server_t *tcp_server) {
+int tcp_server_run(tcp_server_t *tcp_server) {
 
 	// Copy the TCP server structure to the global variable
 	g_server = tcp_server;
@@ -87,6 +89,9 @@ void tcp_server_run(tcp_server_t *tcp_server) {
 
 	// Wait for the thread to end
 	pthread_join(tcp_server->thread, NULL);
+
+	// Return
+	return 0;
 }
 
 /**
@@ -151,7 +156,7 @@ thread_return_type tcp_client_thread_from_server(thread_param_type arg) {
 		
 		// Receive the message
 		socket_read(client->socket, &message, sizeof(message_t));
-		stoupy_crypto(&message, sizeof(message_t), g_server->config.password);
+		STOUPY_CRYPTO(&message, sizeof(message_t), g_server->config.password);
 
 		// Handle the message
 		switch (message.type) {
@@ -159,6 +164,11 @@ thread_return_type tcp_client_thread_from_server(thread_param_type arg) {
 			case GET_ZIP_DIRECTORY:
 				INFO_PRINT("tcp_client_thread(): GET_ZIP_DIRECTORY message received.\n");
 				sendAllDirectoryFiles(client);
+				break;
+			
+			case FILE_CREATED:
+				INFO_PRINT("tcp_client_thread(): FILE_CREATED message received.\n");
+				receive_file_from_client(client, &message);
 				break;
 			
 			case DISCONNECT:
@@ -221,7 +231,7 @@ int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
 	message.type = SEND_ZIP_DIRECTORY;
 	message.message = NULL;
 	message.size = zip_file_size;
-	stoupy_crypto(&message, sizeof(message_t), g_server->config.password);
+	STOUPY_CRYPTO(&message, sizeof(message_t), g_server->config.password);
 	s_code = socket_write(client->socket, &message, sizeof(message_t)) == sizeof(message_t) ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to send the zip file size.\n");
 
@@ -234,7 +244,7 @@ int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
 		ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to read the zip file.\n");
 
 		// Send the zip file
-		stoupy_crypto(s_buffer, read_size, g_server->config.password);
+		STOUPY_CRYPTO(s_buffer, read_size, g_server->config.password);
 		size_t written = socket_write(client->socket, s_buffer, read_size);
 		s_code = (written == read_size) ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to send the zip file.\n");
@@ -255,4 +265,58 @@ int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
 	return 0;
 }
 
+
+/**
+ * @brief Function that receives a file from the client.
+ * This function handle the FILE_CREATED message and MODIFIED_FILE message.
+ * 
+ * @param client	The TCP client structure.
+ * @param message	The message received from the client.
+ * 
+ * @return int		0 if the file was received successfully, -1 otherwise.
+ */
+int receive_file_from_client(tcp_client_from_server_t *client, message_t *message) {
+
+	// Lock the mutex
+	pthread_mutex_lock(&g_server->mutex);
+
+	// Get the file path
+	char file_path[1024];
+	sprintf(file_path, "%s%s", g_server->config.directory, message->message);
+
+	// Receive the file size
+	size_t file_size = 0;
+	s_code = socket_read(client->socket, &file_size, sizeof(size_t)) > 0 ? 0 : -1;
+	STOUPY_CRYPTO(&file_size, sizeof(size_t), g_server->config.password);
+	ERROR_HANDLE_INT_RETURN_INT(s_code, "receive_file_from_client(): Unable to receive the file size.\n");
+
+	// Create the file
+	FILE *file = fopen(file_path, "wb");
+	ERROR_HANDLE_PTR_RETURN_INT(file, "receive_file_from_client(): Unable to create the file.\n");
+
+	// Receive the file
+	while (file_size > 0) {
+
+		// Receive the file
+		size_t read_size = socket_read(client->socket, s_buffer, sizeof(s_buffer));
+		STOUPY_CRYPTO(s_buffer, read_size, g_server->config.password);
+		s_code = read_size > 0 ? 0 : -1;
+		ERROR_HANDLE_INT_RETURN_INT(s_code, "receive_file_from_client(): Unable to receive the file.\n");
+
+		// Write the file
+		size_t written = fwrite(s_buffer, sizeof(byte), read_size, file);
+		s_code = (written == read_size) ? 0 : -1;
+		ERROR_HANDLE_INT_RETURN_INT(s_code, "receive_file_from_client(): Unable to write the file.\n");
+
+		// Update the file size
+		file_size -= read_size;
+	}
+
+	// Close the file
+	s_code = fclose(file);
+	ERROR_HANDLE_INT_RETURN_INT(s_code, "receive_file_from_client(): Unable to close the file.\n");
+
+	// Return
+	return 0;
+}
 

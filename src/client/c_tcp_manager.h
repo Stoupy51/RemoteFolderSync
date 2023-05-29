@@ -21,7 +21,7 @@ typedef struct {
 
 // Function Prototypes
 int setup_tcp_client(config_t config, tcp_client_t *tcp_client);
-void tcp_client_run(tcp_client_t *tcp_client);
+int tcp_client_run(tcp_client_t *tcp_client);
 thread_return_type tcp_client_thread(thread_param_type arg);
 
 // Internal functions prototypes
