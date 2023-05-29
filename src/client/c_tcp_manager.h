@@ -5,6 +5,7 @@
 #include "../config_manager.h"
 #include "../universal_socket.h"
 #include "../universal_pthread.h"
+#include "../network/net_utils.h"
 
 // Structure of the TCP client
 typedef struct {
@@ -19,8 +20,11 @@ typedef struct {
 
 // Function Prototypes
 int setup_tcp_client(config_t config, tcp_client_t *tcp_client);
-thread_return_type tcp_client_thread(thread_param_type arg);
 void tcp_client_run(tcp_client_t *tcp_client);
+thread_return_type tcp_client_thread(thread_param_type arg);
+
+// Internal functions prototypes
+int getAllDirectoryFiles();
 
 #endif
 

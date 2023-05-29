@@ -13,15 +13,16 @@ objects:
 	$(CC) -c "src/file_watcher.c" -o "obj/file_watcher.o" $(COMPILER_FLAGS) 
 	$(CC) -c "src/utils.c" -o "obj/utils.o" $(COMPILER_FLAGS) 
 	$(CC) -c "src/client/c_tcp_manager.c" -o "obj/client/c_tcp_manager.o" $(COMPILER_FLAGS) 
+	$(CC) -c "src/network/net_utils.c" -o "obj/network/net_utils.o" $(COMPILER_FLAGS) 
 	$(CC) -c "src/server/s_tcp_manager.c" -o "obj/server/s_tcp_manager.o" $(COMPILER_FLAGS) 
 	@echo ""
 	@echo ""
 	@echo ""
 	@echo "Compiling the programs..."
 	@echo "- client.exe..."
-	@$(CC) -o "bin/client.exe" "programs/client.c" "obj/config_manager.o" "obj/file_watcher.o" "obj/utils.o" "obj/client/c_tcp_manager.o" "obj/server/s_tcp_manager.o" $(ALL_FLAGS)
+	@$(CC) -o "bin/client.exe" "programs/client.c" "obj/config_manager.o" "obj/file_watcher.o" "obj/utils.o" "obj/client/c_tcp_manager.o" "obj/network/net_utils.o" "obj/server/s_tcp_manager.o" $(ALL_FLAGS)
 	@echo "- server.exe..."
-	@$(CC) -o "bin/server.exe" "programs/server.c" "obj/config_manager.o" "obj/file_watcher.o" "obj/utils.o" "obj/client/c_tcp_manager.o" "obj/server/s_tcp_manager.o" $(ALL_FLAGS)
+	@$(CC) -o "bin/server.exe" "programs/server.c" "obj/config_manager.o" "obj/file_watcher.o" "obj/utils.o" "obj/client/c_tcp_manager.o" "obj/network/net_utils.o" "obj/server/s_tcp_manager.o" $(ALL_FLAGS)
 	@echo "Compilation done"
 	@echo ""
 

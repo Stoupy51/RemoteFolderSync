@@ -4,6 +4,28 @@
 
 #include "../utils.h"
 
+#define ZIP_TEMPORARY_FILE "remote_folder_sync_temp.zip"
+
+
+// Message types
+typedef enum message_type_t {
+	GET_ZIP_DIRECTORY = 1,
+	SEND_ZIP_DIRECTORY = 2,
+} message_type_t;
+
+// Structure for exchanging messages between client and server
+typedef struct {
+
+	// Message type
+	message_type_t type;
+
+	// Message (can be null)
+	byte* message;
+	size_t size;
+
+} message_t;
+
+// Functions prototypes
 void message_coder_decoder(byte* message, size_t size, byte* password);
 
 #endif

@@ -103,7 +103,7 @@ char* readEntireFile(char* path) {
 	return buffer;
 }
 
-byte get_line_buffer[16384];
+char get_line_buffer[16384];
 
 /**
  * @brief Function that reads a line from a file with a limit of 16384 characters.
