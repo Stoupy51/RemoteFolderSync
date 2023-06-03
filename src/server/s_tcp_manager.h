@@ -7,7 +7,7 @@
 #include "../universal_pthread.h"
 #include "../network/net_utils.h"
 
-#define MAX_CLIENTS 8
+#define MAX_CLIENTS 32
 
 // Clients view from the server
 typedef struct tcp_client_from_server_t {
@@ -18,6 +18,7 @@ typedef struct tcp_client_from_server_t {
 
 	// Client thread
 	pthread_t thread;
+	int id;
 
 } tcp_client_from_server_t;
 
@@ -46,7 +47,7 @@ thread_return_type tcp_client_thread_from_server(thread_param_type arg);
 
 // Internal functions prototypes
 int sendAllDirectoryFiles(tcp_client_from_server_t *client);
-int receive_file_from_client(tcp_client_from_server_t *client, message_t *message);
+int handle_action_from_client(tcp_client_from_server_t *client, message_t *message);
 
 
 #endif

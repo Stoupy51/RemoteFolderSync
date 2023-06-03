@@ -19,7 +19,7 @@ config_t config;
 void exitProgram() {
 
 	// Print end of program
-	INFO_PRINT("exitProgram(): End of program, press enter to exit.\n");
+	INFO_PRINT("exitProgram(): End of program, press enter to exit\n");
 	getchar();
 	exit(0);
 }
@@ -34,25 +34,25 @@ void exitProgram() {
 int main() {
 
 	// Print program header and register exitProgram() with atexit()
-	mainInit("main(): Client test program.\n");
+	mainInit("main(): Client test program\n");
 	atexit(exitProgram);
 
 	// Read configuration file
 	config = read_config_file();
 	code = config.port == 0 ? -1 : 0;
-	ERROR_HANDLE_INT_RETURN_INT(code, "main(): Unable to read the configuration file.\n");
-	INFO_PRINT("main(): Configuration file read.\n");
+	ERROR_HANDLE_INT_RETURN_INT(code, "main(): Unable to read the configuration file\n");
+	INFO_PRINT("main(): Configuration file read\n");
 
 	// Setup the TCP client
 	tcp_client_t tcp_client;
 	code = setup_tcp_client(config, &tcp_client);
-	ERROR_HANDLE_INT_RETURN_INT(code, "main(): Unable to setup the TCP client.\n");
+	ERROR_HANDLE_INT_RETURN_INT(code, "main(): Unable to setup the TCP client\n");
 
 	// Wait for the client to finish
 	tcp_client_run(&tcp_client);
 
 	// Final print and return
-	INFO_PRINT("main(): End of program.\n");
+	INFO_PRINT("main(): End of program\n");
 	return 0;
 }
 

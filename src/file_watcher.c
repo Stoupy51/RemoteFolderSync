@@ -78,17 +78,17 @@ int monitor_directory(const char *directory_path, file_created_handler file_crea
 
 				case FILE_ACTION_ADDED:
 					code = file_created(filepath_new);
-					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error when calling file_created() function.\n");
+					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error when calling file_created() function\n");
 					break;
 
 				case FILE_ACTION_MODIFIED:
 					code = file_modified(filepath_new);
-					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error when calling file_modified() function.\n");
+					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error when calling file_modified() function\n");
 					break;
 
 				case FILE_ACTION_REMOVED:
 					code = file_deleted(filepath_new);
-					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error when calling file_deleted() function.\n");
+					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error when calling file_deleted() function\n");
 					break;
 				
 				case FILE_ACTION_RENAMED_OLD_NAME:
@@ -97,7 +97,7 @@ int monitor_directory(const char *directory_path, file_created_handler file_crea
 				
 				case FILE_ACTION_RENAMED_NEW_NAME:
 					code = file_renamed(filepath_old, filepath_new);
-					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error when calling file_renamed() function.\n");
+					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error when calling file_renamed() function\n");
 					break;
 				
 				default:
@@ -115,7 +115,7 @@ int monitor_directory(const char *directory_path, file_created_handler file_crea
 
 	// Close the directory handle
 	code = CloseHandle(directory_handle) ? 0 : -1;
-	ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Cannot close directory handle.\n");
+	ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Cannot close directory handle\n");
 
 	// Return success
 	return 0;
@@ -147,11 +147,11 @@ int monitor_directory(const char *directory_path, file_created_handler file_crea
 
 	// Create the inotify instance
 	int fd = inotify_init();
-	ERROR_HANDLE_INT_RETURN_INT(fd, "monitor_directory(): Cannot create inotify instance.\n");
+	ERROR_HANDLE_INT_RETURN_INT(fd, "monitor_directory(): Cannot create inotify instance\n");
 
 	// Add the directory to the watch list
 	int wd = inotify_add_watch(fd, directory_path, IN_ALL_EVENTS);
-	ERROR_HANDLE_INT_RETURN_INT(wd, "monitor_directory(): Cannot add directory to the watch list.\n");
+	ERROR_HANDLE_INT_RETURN_INT(wd, "monitor_directory(): Cannot add directory to the watch list\n");
 
 	// Print the directory path
 	INFO_PRINT("Monitoring directory: %s\n", directory_path);
@@ -177,19 +177,19 @@ int monitor_directory(const char *directory_path, file_created_handler file_crea
 				// If the file was created
 				if (event->mask & IN_CREATE) {
 					code = file_created(event->name);
-					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error in file_created_handler.\n");
+					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error in file_created_handler\n");
 				}
 
 				// If the file was modified
 				if (event->mask & IN_MODIFY) {
 					code = file_modified(event->name);
-					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error in file_modified_handler.\n");
+					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error in file_modified_handler\n");
 				}
 
 				// If the file was deleted
 				if (event->mask & IN_DELETE) {
 					code = file_deleted(event->name);
-					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error in file_deleted_handler.\n");
+					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error in file_deleted_handler\n");
 				}
 			}
 
@@ -200,9 +200,8 @@ int monitor_directory(const char *directory_path, file_created_handler file_crea
 
 	// Remove the directory from the watch list
 	code = inotify_rm_watch(fd, wd);
-	int code_2 = close(fd);
-	ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Cannot remove directory from the watch list.\n");
-	ERROR_HANDLE_INT_RETURN_INT(code_2, "monitor_directory(): Cannot close inotify instance.\n");
+	close(fd);
+	ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Cannot remove directory from the watch list\n");
 
 	// Return success
 	return 0;

@@ -42,23 +42,15 @@ int writeEntireFile(char* path, char* content, int size, int mode) {
 
 	// Open the file
 	int fd = open(path, O_WRONLY | O_CREAT | mode, 0644);
-	if (fd == -1) {
-		ERROR_PRINT("writeEntireFile(): Cannot open file %s\n", path);
-		return -1;
-	}
+	ERROR_HANDLE_INT_RETURN_INT(fd, "writeEntireFile(): Cannot open file '%s'\n", path);
 
 	// Write the file
 	int written_size = write(fd, content, size);
-	if (written_size == -1) {
-		ERROR_PRINT("writeEntireFile(): Cannot write file %s\n", path);
-		return -1;
-	}
+	if (written_size == -1) close(fd);
+	ERROR_HANDLE_INT_RETURN_INT(written_size, "writeEntireFile(): Cannot write to file '%s'\n", path);
 
 	// Close the file
-	if (close(fd) == -1) {
-		ERROR_PRINT("writeEntireFile(): Cannot close file %s\n", path);
-		return -1;
-	}
+	close(fd);
 
 	// Return
 	return 0;
@@ -76,10 +68,7 @@ char* readEntireFile(char* path) {
 	
 	// Open the file
 	int fd = open(path, O_RDONLY);
-	if (fd == -1) {
-		ERROR_PRINT("readEntireFile(): Cannot open file %s\n", path);
-		return NULL;
-	}
+	ERROR_HANDLE_INT_RETURN_NULL(fd, "readEntireFile(): Cannot open file '%s'\n", path);
 
 	// Get the size of the file
 	int size = lseek(fd, 0, SEEK_END);
@@ -87,17 +76,13 @@ char* readEntireFile(char* path) {
 
 	// Allocate memory for the file content
 	char* buffer = malloc(sizeof(char) * (size + 1));
-	if (buffer == NULL) {
-		ERROR_PRINT("readEntireFile(): Cannot allocate memory for file %s\n", path);
-		return NULL;
-	}
+	if (buffer == NULL) close(fd);
+	ERROR_HANDLE_PTR_RETURN_NULL(buffer, "readEntireFile(): Cannot allocate memory for file '%s'\n", path);
 
 	// Read the file
-	int read_size;
-	if ((read_size = read(fd, buffer, size)) == -1) {
-		ERROR_PRINT("readEntireFile(): Cannot read file %s\n", path);
-		return NULL;
-	}
+	int read_size = read(fd, buffer, size);
+	if (read_size == -1) close(fd);
+	ERROR_HANDLE_INT_RETURN_NULL(read_size, "readEntireFile(): Cannot read file '%s'\n", path);
 
 	// Close the file
 	close(fd);
@@ -155,7 +140,7 @@ int get_line_from_file(char **lineptr, int fd) {
 
 	// If the lineptr is NULL, allocate it
 	if (*lineptr == NULL)
-		ERROR_HANDLE_PTR_RETURN_INT((*lineptr = malloc(i + 1)), "get_line_from_file(): Unable to allocate the lineptr.\n");
+		ERROR_HANDLE_PTR_RETURN_INT((*lineptr = malloc(i + 1)), "get_line_from_file(): Unable to allocate the lineptr\n");
 
 	// Copy the buffer to the lineptr
 	strcpy(*lineptr, get_line_buffer);

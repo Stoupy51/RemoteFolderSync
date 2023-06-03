@@ -18,7 +18,6 @@ config_t read_config_file() {
 	config_t config;
 	memset(&config, 0, sizeof(config_t));
 	char *line = NULL;
-	int code;
 
 	// Try to open the file
 	int fd = open(CONFIG_FILE, O_RDONLY);
@@ -27,7 +26,7 @@ config_t read_config_file() {
 		// Try to open the file in the bin folder
 		fd = open(CONFIG_FILE_IN_BIN, O_RDONLY);
 		if (fd < 0) {
-			ERROR_PRINT("read_config_file(): Unable to open the config file.\n");
+			ERROR_PRINT("read_config_file(): Unable to open the config file\n");
 			return config;
 		}
 	}
@@ -80,9 +79,7 @@ config_t read_config_file() {
 	free(line);
 
 	// Close the file
-	code = close(fd);
-	if (code < 0)
-		ERROR_PRINT("read_config_file(): Unable to close the config file.\n");
+	close(fd);
 	
 	// Return the config
 	return config;

@@ -16,7 +16,7 @@ char key;
 void exitProgram() {
 
 	// Print end of program
-	INFO_PRINT("exitProgram(): End of program, press enter to exit.\n");
+	INFO_PRINT("exitProgram(): End of program, press enter to exit\n");
 	getchar();
 	exit(0);
 }
@@ -29,7 +29,7 @@ void exitProgram() {
  * @return int	0 if success, -1 otherwise
  */
 int on_file_created(const char *filepath) {
-	INFO_PRINT("file_created_handler(): File '%s' created.\n", filepath);
+	INFO_PRINT("file_created_handler(): File '%s' created\n", filepath);
 	return 0;
 }
 
@@ -41,7 +41,7 @@ int on_file_created(const char *filepath) {
  * @return int	0 if success, -1 otherwise
  */
 int on_file_modified(const char *filepath) {
-	INFO_PRINT("file_modified_handler(): File '%s' modified.\n", filepath);
+	INFO_PRINT("file_modified_handler(): File '%s' modified\n", filepath);
 	return 0;
 }
 
@@ -53,7 +53,7 @@ int on_file_modified(const char *filepath) {
  * @return int	0 if success, -1 otherwise
  */
 int on_file_deleted(const char *filepath) {
-	INFO_PRINT("file_deleted_handler(): File '%s' deleted.\n", filepath);
+	INFO_PRINT("file_deleted_handler(): File '%s' deleted\n", filepath);
 	return 0;
 }
 
@@ -66,7 +66,7 @@ int on_file_deleted(const char *filepath) {
  * @return int	0 if success, -1 otherwise
  */
 int on_file_renamed(const char *filepath_old, const char *filepath_new) {
-	INFO_PRINT("file_renamed_handler(): File '%s' renamed to '%s'.\n", filepath_old, filepath_new);
+	INFO_PRINT("file_renamed_handler(): File '%s' renamed to '%s'\n", filepath_old, filepath_new);
 	return 0;
 }
 
@@ -85,14 +85,14 @@ int main(int argc, char **argv) {
 
 	// Check for arguments
 	if (argc != 2) {
-		INFO_PRINT("main(): No directory path provided, using current directory.\n");
+		INFO_PRINT("main(): No directory path provided, using current directory\n");
 		directory_path = ".";
 	}
 	else
 		directory_path = argv[1];
 
 	// Print program header and register exitProgram() with atexit()
-	mainInit("main(): File Watching test program.\n");
+	mainInit("main(): File Watching test program\n");
 	atexit(exitProgram);
 
 	// Monitor the directory
@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
 	ERROR_HANDLE_INT_RETURN_INT(code, "main(): Failed to monitor the directory\n");
 
 	// Final print and return
-	INFO_PRINT("main(): End of program.\n");
+	INFO_PRINT("main(): End of program\n");
 	return 0;
 }
 

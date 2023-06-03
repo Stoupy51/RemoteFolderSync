@@ -27,6 +27,7 @@ thread_return_type tcp_client_thread(thread_param_type arg);
 
 // Internal functions prototypes
 int getAllDirectoryFiles();
+int on_client_file_change_handler(const char *filepath, const char *new_filepath, message_type_t action);
 int on_client_file_created(const char *filepath);
 int on_client_file_modified(const char *filepath);
 int on_client_file_deleted(const char *filepath);
