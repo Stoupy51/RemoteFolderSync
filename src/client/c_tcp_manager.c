@@ -12,11 +12,9 @@
 	int c_winsock_init = 0;
 #endif
 
-#define C_BUFFER_SIZE 8192
-
 // Global variables
 int c_code;
-byte c_buffer[C_BUFFER_SIZE];
+byte c_buffer[CS_BUFFER_SIZE];
 tcp_client_t *g_client;
 
 /**
@@ -277,11 +275,10 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 
 	// Free the message
 	free(message.message);
+	INFO_PRINT("on_client_file_change_handler(): Message sent\n");
 
 	// Switch case on the action type
 	switch (action) {
-
-
 
 
 
@@ -300,37 +297,32 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 	ERROR_HANDLE_PTR_RETURN_INT(file, "on_client_file_change_handler(): Unable to open the file\n");
 
 	// Send the size of the file
+	size_t file_size = 0;
 	fseek(file, 0, SEEK_END);
-	size_t file_size = ftell(file);
+	file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
+	size_t file_size_crypted = file_size;
+	STOUPY_CRYPTO(&file_size_crypted, sizeof(size_t), g_client->config.password);
+	bytes = socket_write(g_client->socket, &file_size_crypted, sizeof(size_t));
+	code = bytes > 0 ? 0 : -1;
+	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to send the file size\n");
+	INFO_PRINT("on_client_file_change_handler(): File size crypted : %zu\n", file_size);
 
 	// Send the file
-	size_t read_size = 0;
-	while (read_size < file_size) {
+	size_t bytes_remaining = file_size;
+	while (bytes_remaining > 0) {
 
-		// Get size to read
-		size_t size_to_read = 0;
-		if (file_size - read_size > C_BUFFER_SIZE)
-			size_to_read = C_BUFFER_SIZE;
-		else
-			size_to_read = file_size - read_size;
-		size_to_read *= sizeof(byte);
+		// Get the size of the buffer
+		size_t buffer_size = CS_BUFFER_SIZE < bytes_remaining ? CS_BUFFER_SIZE : bytes_remaining;
+		INFO_PRINT("on_client_file_change_handler(): Bytes remaining : %zu / %zu\n", bytes_remaining, file_size);
 
-		// Read the file into the c_buffer
-		size_t read_bytes = fread(c_buffer, size_to_read, 1, file);
-		code = read_bytes > 0 ? 0 : -1;
-		if (code == -1) fclose(file);
-		ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to read the file\n");
+		// Read the file into the buffer
+		fread(c_buffer, sizeof(byte), buffer_size, file);
+		//STOUPY_CRYPTO(c_buffer, buffer_size, g_client->config.password);
+		socket_write(g_client->socket, c_buffer, buffer_size);
 
-		// Write the c_buffer into the socket
-		STOUPY_CRYPTO(c_buffer, read_bytes, g_client->config.password);
-		bytes = socket_write(g_client->socket, c_buffer, read_bytes);
-		code = bytes > 0 ? 0 : -1;
-		if (code == -1) fclose(file);
-		ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to send the file\n");
-
-		// Update the read size
-		read_size += read_bytes;
+		// Update the bytes remaining
+		bytes_remaining -= buffer_size;
 	}
 
 	// Close the file

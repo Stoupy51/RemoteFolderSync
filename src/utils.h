@@ -31,12 +31,11 @@ typedef unsigned char byte;
 
 // Utils defines to print debug messages
 #define INFO_PRINT(...) if (IS_INFO_LEVEL) { if (DEVELOPMENT_MODE) fprintf(stderr, GREEN "[INFO] " RESET __VA_ARGS__); else printf(GREEN "[INFO] " RESET __VA_ARGS__); }
-#define WARNING_PRINT(...) if (IS_WARNING_LEVEL) { fprintf(stderr, YELLOW "[WARNING] " RESET __VA_ARGS__); }
-#define ERROR_PRINT(...) if (IS_ERROR_LEVEL) { fprintf(stderr, RED "[ERROR] "RESET __VA_ARGS__); }
+#define WARNING_PRINT(...) if (IS_WARNING_LEVEL) { char* error_msg = strerror(errno); char buffer[16384]; sprintf(buffer, YELLOW "[WARNING] " RESET __VA_ARGS__); int err_pos = strlen(buffer); while (err_pos > 0 && buffer[err_pos] != '\n') err_pos--; buffer[err_pos] = '\0'; fprintf(stderr, "%s: %s\n", buffer, error_msg); }
+#define ERROR_PRINT(...) if (IS_ERROR_LEVEL) { char* error_msg = strerror(errno); char buffer[16384]; sprintf(buffer, RED "[ERROR] " RESET __VA_ARGS__); int err_pos = strlen(buffer); while (err_pos > 0 && buffer[err_pos] != '\n') err_pos--; buffer[err_pos] = '\0'; fprintf(stderr, "%s: %s\n", buffer, error_msg); }
 #define PRINTER(...) if (DEVELOPMENT_MODE) fprintf(stderr, __VA_ARGS__); else printf(__VA_ARGS__);
 
 // Utils for error handling
-// TODO perror
 #define ERROR_HANDLE_INT(error, ...) if (error < 0) { ERROR_PRINT(__VA_ARGS__); exit(EXIT_FAILURE); }
 #define ERROR_HANDLE_PTR(ptr, ...) if (ptr == NULL) { ERROR_PRINT(__VA_ARGS__); exit(EXIT_FAILURE); }
 #define ERROR_HANDLE_INT_RETURN_INT(error, ...) if (error < 0) { ERROR_PRINT(__VA_ARGS__); return error; }

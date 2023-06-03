@@ -13,7 +13,17 @@
  */
 void message_coder_decoder(byte* bytes, size_t size, string_t password) {
 	size_t i;
-	for (i = 0; i < size && bytes[i] != '\0'; i++)
+	for (i = 0; i < size && bytes[i] != '\0'; i++) {
+
+		// Remember the original byte
+		byte tmp = bytes[i];
+
+		// Encode the byte
 		bytes[i] ^= password.str[i % password.size];
+
+		// Avoid encoding to the '\0' character
+		if (bytes[i] == '\0')
+			bytes[i] = tmp;
+	}
 }
 
