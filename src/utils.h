@@ -36,6 +36,7 @@ typedef unsigned char byte;
 #define PRINTER(...) if (DEVELOPMENT_MODE) fprintf(stderr, __VA_ARGS__); else printf(__VA_ARGS__);
 
 // Utils for error handling
+// TODO perror
 #define ERROR_HANDLE_INT(error, ...) if (error < 0) { ERROR_PRINT(__VA_ARGS__); exit(EXIT_FAILURE); }
 #define ERROR_HANDLE_PTR(ptr, ...) if (ptr == NULL) { ERROR_PRINT(__VA_ARGS__); exit(EXIT_FAILURE); }
 #define ERROR_HANDLE_INT_RETURN_INT(error, ...) if (error < 0) { ERROR_PRINT(__VA_ARGS__); return error; }
