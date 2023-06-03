@@ -32,7 +32,7 @@ typedef struct {
 } message_t;
 
 // Functions prototypes
-void message_coder_decoder(byte* bytes, size_t size, char* password);
+void message_coder_decoder(byte* bytes, size_t size, string_t password);
 #define STOUPY_CRYPTO(bytes, size, password) message_coder_decoder((byte*)bytes, size, password)
 
 #endif

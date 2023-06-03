@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
 
 	// Monitor the directory
 	code = monitor_directory(directory_path, on_file_created, on_file_modified, on_file_deleted, on_file_renamed);
-	ERROR_HANDLE_INT_RETURN_INT(code, "main(): Failed to monitor the directory");
+	ERROR_HANDLE_INT_RETURN_INT(code, "main(): Failed to monitor the directory\n");
 
 	// Final print and return
 	INFO_PRINT("main(): End of program.\n");

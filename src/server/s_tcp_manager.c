@@ -281,24 +281,33 @@ int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
  */
 int receive_file_from_client(tcp_client_from_server_t *client, message_t *message) {
 
-	// TODO : check crash reason
-
 	// Lock the mutex
 	pthread_mutex_lock(&g_server->mutex);
+	INFO_PRINT("receive_file_from_client(): Mutex locked.\n");
+
+	// Receive the file message
+	message->message = malloc(message->size);
+	s_code = socket_read(client->socket, message->message, message->size) > 0 ? 0 : -1;
+	STOUPY_CRYPTO(message->message, message->size, g_server->config.password);
+	ERROR_HANDLE_INT_RETURN_INT(s_code, "receive_file_from_client(): Unable to receive the file message.\n");
+	INFO_PRINT("receive_file_from_client(): File message : '%s'.\n", message->message);
 
 	// Get the file path
 	char file_path[1024];
 	sprintf(file_path, "%s%s", g_server->config.directory, message->message);
+	INFO_PRINT("receive_file_from_client(): Paste file path : '%s'.\n", file_path);
 
 	// Receive the file size
 	size_t file_size = 0;
 	s_code = socket_read(client->socket, &file_size, sizeof(size_t)) > 0 ? 0 : -1;
 	STOUPY_CRYPTO(&file_size, sizeof(size_t), g_server->config.password);
 	ERROR_HANDLE_INT_RETURN_INT(s_code, "receive_file_from_client(): Unable to receive the file size.\n");
+	INFO_PRINT("receive_file_from_client(): File size : %zu.\n", file_size);
 
 	// Create the file
 	FILE *file = fopen(file_path, "wb");
 	ERROR_HANDLE_PTR_RETURN_INT(file, "receive_file_from_client(): Unable to create the file.\n");
+	INFO_PRINT("receive_file_from_client(): File created.\n");
 
 	// Receive the file
 	while (file_size > 0) {
@@ -308,11 +317,13 @@ int receive_file_from_client(tcp_client_from_server_t *client, message_t *messag
 		STOUPY_CRYPTO(s_buffer, read_size, g_server->config.password);
 		s_code = read_size > 0 ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(s_code, "receive_file_from_client(): Unable to receive the file.\n");
+		INFO_PRINT("receive_file_from_client(): File received (%zu bytes).\n", read_size);
 
 		// Write the file
 		size_t written = fwrite(s_buffer, sizeof(byte), read_size, file);
 		s_code = (written == read_size) ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(s_code, "receive_file_from_client(): Unable to write the file.\n");
+		INFO_PRINT("receive_file_from_client(): File written (%zu bytes).\n", written);
 
 		// Update the file size
 		file_size -= read_size;
@@ -321,6 +332,7 @@ int receive_file_from_client(tcp_client_from_server_t *client, message_t *messag
 	// Close the file
 	s_code = fclose(file);
 	ERROR_HANDLE_INT_RETURN_INT(s_code, "receive_file_from_client(): Unable to close the file.\n");
+	INFO_PRINT("receive_file_from_client(): File closed.\n");
 
 	// Return
 	return 0;

@@ -44,6 +44,9 @@ int setup_tcp_client(config_t config, tcp_client_t *tcp_client) {
 
 	// Init mutex
 	pthread_mutex_init(&tcp_client->mutex, NULL);
+
+	// Init condition
+	pthread_cond_init(&tcp_client->zip_file_received, NULL);
 	
 	// Create the TCP socket
 	tcp_client->socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -81,6 +84,11 @@ int tcp_client_run(tcp_client_t *tcp_client) {
 	// Create the thread that will handle the connections
 	pthread_create(&tcp_client->thread, NULL, tcp_client_thread, NULL);
 
+	// Wait for the thread to receive the zip file
+	pthread_mutex_lock(&tcp_client->mutex);
+	pthread_cond_wait(&tcp_client->zip_file_received, &tcp_client->mutex);
+	pthread_mutex_unlock(&tcp_client->mutex);
+
 	// Monitor the directory
 	c_code = monitor_directory(
 		tcp_client->config.directory,
@@ -89,7 +97,7 @@ int tcp_client_run(tcp_client_t *tcp_client) {
 		on_client_file_deleted,
 		on_client_file_renamed
 	);
-	ERROR_HANDLE_INT_RETURN_INT(c_code, "main(): Failed to monitor the directory");
+	ERROR_HANDLE_INT_RETURN_INT(c_code, "main(): Failed to monitor the directory\n");
 
 	// Wait for the thread to end
 	pthread_join(tcp_client->thread, NULL);
@@ -116,8 +124,10 @@ thread_return_type tcp_client_thread(thread_param_type arg) {
 
 	// Get directory files
 	getAllDirectoryFiles();
+	pthread_cond_signal(&g_client->zip_file_received);
 
 	// TODO : Receive directory changes from the server
+	while (1);
 
 	// Disconnect from the server
 	message.type = DISCONNECT;
@@ -126,6 +136,7 @@ thread_return_type tcp_client_thread(thread_param_type arg) {
 	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
 	c_code = socket_write(g_client->socket, &message, sizeof(message_t)) > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(c_code, "tcp_client_thread(): Unable to send the message.\n");
+	INFO_PRINT("tcp_client_thread(): Disconnected from the server.\n");
 
 	// Close the socket and return
 	socket_close(g_client->socket);
@@ -207,6 +218,9 @@ int getAllDirectoryFiles() {
 	c_code = remove(ZIP_TEMPORARY_FILE);
 	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to remove the zip file.\n");
 
+	// Print the message
+	INFO_PRINT("getAllDirectoryFiles(): Directory files received.\n");
+
 	// Return
 	return 0;
 }
@@ -223,34 +237,53 @@ int on_client_file_created(const char *filepath) {
 
 	// Lock the mutex
 	pthread_mutex_lock(&g_client->mutex);
+	INFO_PRINT("file_created_handler(): Mutex locked.\n");
 	int code = 0;
 	int filepath_size = strlen(filepath) + 1;
+	INFO_PRINT("file_created_handler(): Filepath size : %d.\n", filepath_size);
 
 	// Copy the filepath into the c_buffer
 	memcpy(c_buffer, filepath, filepath_size);
 	STOUPY_CRYPTO(c_buffer, filepath_size, g_client->config.password);
+	INFO_PRINT("file_created_handler(): Filepath copied into the c_buffer : '%s'.\n", c_buffer);
 
 	// Create the message
 	message_t message;
 	message.type = FILE_CREATED;
-	message.message = malloc(filepath_size);
+	message.message = malloc(filepath_size * sizeof(byte));
+	ERROR_HANDLE_PTR_RETURN_INT(message.message, "file_created_handler(): Unable to allocate memory for the message.\n");
 	memcpy(message.message, c_buffer, filepath_size);
 	message.size = filepath_size;
+	INFO_PRINT("file_created_handler(): Message created with size : %zu.\n", message.size);
 
 	// Send the message through the socket
 	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
 	size_t bytes = socket_write(g_client->socket, &message, sizeof(message_t));
 	code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_created(): Unable to send the message.\n");
+	INFO_PRINT("file_created_handler(): Message sent.\n");
+
+	// Send the message.message through the socket
+	bytes = socket_write(g_client->socket, message.message, message.size);
+	code = bytes > 0 ? 0 : -1;
+	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_created(): Unable to send the message.message.\n");
+	INFO_PRINT("file_created_handler(): Message.message sent.\n");
 
 	// Free the message
 	free(message.message);
+	INFO_PRINT("file_created_handler(): Message freed.\n");
 
 	///// Read the file
+	// Get the real filepath
+	char real_filepath[2048];
+	sprintf(real_filepath, "%s%s", g_client->config.directory, filepath);
+	INFO_PRINT("file_created_handler(): Real filepath : %s.\n", real_filepath);
+
 	// Open the file
-	int fd = open(filepath, O_RDONLY);
+	int fd = open(real_filepath, O_RDONLY);
 	code = fd > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_created(): Unable to open the file.\n");
+	INFO_PRINT("file_created_handler(): File opened : %s.\n", real_filepath);
 
 	// Send the size of the file
 	size_t file_size = lseek(fd, 0, SEEK_END);
@@ -260,6 +293,7 @@ int on_client_file_created(const char *filepath) {
 	bytes = socket_write(g_client->socket, &file_size_crypted, sizeof(size_t));
 	code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_created(): Unable to send the file size.\n");
+	INFO_PRINT("file_created_handler(): File size sent : %zu.\n", file_size);
 
 	// Send the file
 	size_t read_size = 0;
@@ -269,12 +303,14 @@ int on_client_file_created(const char *filepath) {
 		size_t read_bytes = read(fd, c_buffer, sizeof(c_buffer));
 		code = read_bytes > 0 ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_created(): Unable to read the file.\n");
+		INFO_PRINT("file_created_handler(): File read : (%zu bytes).\n", read_bytes);
 
 		// Write the c_buffer into the socket
 		STOUPY_CRYPTO(c_buffer, read_bytes, g_client->config.password);
 		bytes = socket_write(g_client->socket, c_buffer, read_bytes);
 		code = bytes > 0 ? 0 : -1;
 		ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_created(): Unable to send the file.\n");
+		INFO_PRINT("file_created_handler(): File sent (%zu bytes).\n", bytes);
 
 		// Update the read size
 		read_size += read_bytes;

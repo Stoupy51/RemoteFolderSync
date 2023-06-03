@@ -43,6 +43,11 @@ typedef unsigned char byte;
 #define ERROR_HANDLE_PTR_RETURN_INT(ptr, ...) if (ptr == NULL) { ERROR_PRINT(__VA_ARGS__); return -1; }
 #define ERROR_HANDLE_PTR_RETURN_NULL(ptr, ...) if (ptr == NULL) { ERROR_PRINT(__VA_ARGS__); return NULL; }
 
+///// Structures
+typedef struct string_t {
+	char* str;
+	size_t size;
+} string_t;
 
 // Function prototypes
 void mainInit(char* header);

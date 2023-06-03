@@ -60,7 +60,9 @@ config_t read_config_file() {
 
 		// Check if the key is password
 		else if (strcmp(key, "password") == 0) {
-			strcpy(config.password, value);
+			config.password.size = strlen(value) + 1;
+			config.password.str = malloc(config.password.size * sizeof(char));
+			strcpy(config.password.str, value);
 		}
 
 		// Check if the key is ip
