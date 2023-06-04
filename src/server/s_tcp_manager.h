@@ -11,16 +11,19 @@
 
 // Clients view from the server
 typedef struct tcp_client_from_server_t {
+	SOCKET socket;
+	struct sockaddr_in address;
+	int id;
+} tcp_client_from_server_t;
 
-	// Client socket
+// Structure for a server thread
+typedef struct tcp_server_thread_t {
 	SOCKET socket;
 	struct sockaddr_in address;
 
-	// Client thread
 	pthread_t thread;
-	int id;
-
-} tcp_client_from_server_t;
+	pthread_mutex_t mutex;
+} tcp_server_thread_t;
 
 // Structure of the TCP server
 typedef struct tcp_server_t {
@@ -28,10 +31,9 @@ typedef struct tcp_server_t {
 	// Configuration
 	config_t config;
 
-	// Server socket, thread and mutex
-	SOCKET socket;
-	pthread_t thread;
-	pthread_mutex_t mutex;
+	// Threads
+	tcp_server_thread_t handle_new_connections;
+	tcp_server_thread_t handle_client_requests;
 
 	// Clients
 	int clients_count;
@@ -42,12 +44,12 @@ typedef struct tcp_server_t {
 // Function Prototypes
 int setup_tcp_server(config_t config, tcp_server_t *tcp_server);
 int tcp_server_run(tcp_server_t *tcp_server);
-thread_return_type tcp_server_thread(thread_param_type arg);
-thread_return_type tcp_client_thread_from_server(thread_param_type arg);
+thread_return_type tcp_server_handle_new_connections(thread_param_type arg);
+thread_return_type tcp_server_handle_client_requests(thread_param_type arg);
 
 // Internal functions prototypes
-int sendAllDirectoryFiles(tcp_client_from_server_t *client);
-int handle_action_from_client(tcp_client_from_server_t *client, message_t *message);
+int sendAllDirectoryFiles(SOCKET client_socket);
+int handle_action_from_client(client_info_t client, message_t *message);
 
 
 #endif

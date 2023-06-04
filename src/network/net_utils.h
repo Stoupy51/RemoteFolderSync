@@ -3,6 +3,7 @@
 #define __NETWORK_UTILS_H__
 
 #include "../utils.h"
+#include "../universal_socket.h"
 
 #define ZIP_TEMPORARY_FILE "remote_folder_sync_temp.zip"
 #define CS_BUFFER_SIZE 1024 * 1024		// 1 MB
@@ -10,15 +11,24 @@
 
 // Message types
 typedef enum message_type_t {
-	GET_ZIP_DIRECTORY = 1,
-	SEND_ZIP_DIRECTORY = 2,
-	FILE_CREATED = 3,
-	FILE_MODIFIED = 4,
-	FILE_DELETED = 5,
-	FILE_RENAMED = 6,
+
+	FILE_CREATED = 10,
+	FILE_MODIFIED = 11,
+	FILE_DELETED = 12,
+	FILE_RENAMED = 13,
 
 	DISCONNECT = 100,
+	VALID_RESPONSE = 61166,
+
 } message_type_t;
+
+// Structure for client information
+typedef struct client_info_t {
+	SOCKET socket;
+	struct sockaddr_in address;
+	char *ip;
+	int port;
+} client_info_t;
 
 // Structure for exchanging messages between client and server
 typedef struct {

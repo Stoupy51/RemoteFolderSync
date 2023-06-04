@@ -16,8 +16,6 @@
 #define C_BUFFER_SIZE CS_BUFFER_SIZE
 
 // Global variables
-int c_code;
-byte c_buffer[C_BUFFER_SIZE];
 tcp_client_t *g_client;
 
 /**
@@ -32,14 +30,20 @@ int setup_tcp_client(config_t config, tcp_client_t *tcp_client) {
 	
 	// Variables
 	struct sockaddr_in client_addr;
+	memset(&client_addr, 0, sizeof(struct sockaddr_in));
+	int code;
+
+	// Fill the TCP client structure
+	memset(tcp_client, 0, sizeof(tcp_client_t));
+	tcp_client->config = config;
 
 	// Init Winsock if needed
 	#ifdef _WIN32
 
 	if (c_winsock_init == 0) {
 		WSADATA wsa_data;
-		c_code = WSAStartup(MAKEWORD(2, 2), &wsa_data);
-		ERROR_HANDLE_INT_RETURN_INT(c_code, "setup_tcp_client(): Unable to init Winsock\n");
+		code = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+		ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_client(): Unable to init Winsock\n");
 		c_winsock_init = 1;
 	}
 
@@ -47,26 +51,25 @@ int setup_tcp_client(config_t config, tcp_client_t *tcp_client) {
 
 	// Init mutex
 	pthread_mutex_init(&tcp_client->mutex, NULL);
-
-	// Init condition
-	pthread_cond_init(&tcp_client->zip_file_received, NULL);
 	
 	// Create the TCP socket
 	tcp_client->socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	c_code = tcp_client->socket == INVALID_SOCKET ? -1 : 0;
-	ERROR_HANDLE_INT_RETURN_INT(c_code, "setup_tcp_client(): Unable to create the socket\n");
+	code = tcp_client->socket == INVALID_SOCKET ? -1 : 0;
+	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_client(): Unable to create the socket\n");
 	INFO_PRINT("setup_tcp_client(): Socket created\n");
 
 	// Connect to the server
 	client_addr.sin_family = AF_INET;
 	client_addr.sin_addr.s_addr = inet_addr(config.ip);
 	client_addr.sin_port = htons(config.port);
-	c_code = connect(tcp_client->socket, (struct sockaddr *)&client_addr, sizeof(client_addr));
-	ERROR_HANDLE_INT_RETURN_INT(c_code, "setup_tcp_client(): Unable to connect to the server\n");
+	code = connect(tcp_client->socket, (struct sockaddr *)&client_addr, sizeof(client_addr));
+	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_client(): Unable to connect to the server\n");
 	INFO_PRINT("setup_tcp_client(): Connected to the server\n");
 
-	// Fill the TCP client structure
-	tcp_client->config = config;
+	// Receive the zip file
+	g_client = tcp_client;
+	code = getAllDirectoryFiles();
+	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_client(): Failed to receive the zip file\n");
 
 	// Return
 	return 0;
@@ -81,26 +84,18 @@ int setup_tcp_client(config_t config, tcp_client_t *tcp_client) {
  */
 int tcp_client_run(tcp_client_t *tcp_client) {
 
-	// Copy to the global variable
-	g_client = tcp_client;
-
-	// Create the thread that will handle the connections
+	// Create the thread that will handle the connection with the server
 	pthread_create(&tcp_client->thread, NULL, tcp_client_thread, NULL);
 
-	// Wait for the thread to receive the zip file
-	pthread_mutex_lock(&tcp_client->mutex);
-	pthread_cond_wait(&tcp_client->zip_file_received, &tcp_client->mutex);
-	pthread_mutex_unlock(&tcp_client->mutex);
-
 	// Monitor the directory
-	c_code = monitor_directory(
+	int code = monitor_directory(
 		tcp_client->config.directory,
 		on_client_file_created,
 		on_client_file_modified,
 		on_client_file_deleted,
 		on_client_file_renamed
 	);
-	ERROR_HANDLE_INT_RETURN_INT(c_code, "main(): Failed to monitor the directory\n");
+	ERROR_HANDLE_INT_RETURN_INT(code, "main(): Failed to monitor the directory\n");
 
 	// Wait for the thread to end
 	pthread_join(tcp_client->thread, NULL);
@@ -119,26 +114,22 @@ int tcp_client_run(tcp_client_t *tcp_client) {
 thread_return_type tcp_client_thread(thread_param_type arg) {
 
 	// Handle parameters
-	c_code = arg == NULL ? 0 : -1;
-	ERROR_HANDLE_INT_RETURN_INT(c_code, "tcp_client_thread(): Invalid parameters, 'arg' should be NULL\n");
+	int code = (arg == NULL) ? 0 : -1;
+	ERROR_HANDLE_INT_RETURN_INT(code, "tcp_client_thread(): Invalid parameters, 'arg' should be NULL\n");
 
 	// Variables
 	message_t message;
-
-	// Get directory files
-	getAllDirectoryFiles();
-	pthread_cond_signal(&g_client->zip_file_received);
+	memset(&message, 0, sizeof(message_t));
 
 	// TODO : Receive directory changes from the server
 	while (1);
 
 	// Disconnect from the server
+	memset(&message, 0, sizeof(message_t));
 	message.type = DISCONNECT;
-	message.message = NULL;
-	message.size = 0;
 	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
-	c_code = socket_write(g_client->socket, &message, sizeof(message_t), 0) > 0 ? 0 : -1;
-	ERROR_HANDLE_INT_RETURN_INT(c_code, "tcp_client_thread(): Unable to send the message\n");
+	code = socket_write(g_client->socket, &message, sizeof(message_t), 0) > 0 ? 0 : -1;
+	ERROR_HANDLE_INT_RETURN_INT(code, "tcp_client_thread(): Unable to send the disconnect message\n");
 	INFO_PRINT("tcp_client_thread(): Disconnected from the server\n");
 
 	// Close the socket and return
@@ -148,7 +139,7 @@ thread_return_type tcp_client_thread(thread_param_type arg) {
 
 /**
  * @brief Function that gets all the files in the directory from the server.
- * It requests a zip file, and then unzips it.
+ * It receives a zip file containing all, and extracts it.
  * 
  * @return int		0 if the function ended successfully, -1 otherwise.
  */
@@ -156,28 +147,13 @@ int getAllDirectoryFiles() {
 
 	// Create the message
 	message_t message;
-	message.type = GET_ZIP_DIRECTORY;
-	message.message = NULL;
-	message.size = 0;
+	memset(&message, 0, sizeof(message_t));
 
-	// Variables
-	size_t bytes = 0;
-
-	// Send the message through the socket
+	// Receive the file size through the socket
+	size_t bytes = socket_read(g_client->socket, &message, sizeof(message_t), 0);
 	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
-	bytes = socket_write(g_client->socket, &message, sizeof(message_t), 0);
-	c_code = bytes > 0 ? 0 : -1;
-	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to send the message\n");
-
-	// Receive the message through the socket
-	bytes = socket_read(g_client->socket, &message, sizeof(message_t), 0);
-	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
-	c_code = bytes > 0 ? 0 : -1;
-	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to receive the message\n");
-
-	// Check the message type
-	c_code = message.type == SEND_ZIP_DIRECTORY ? 0 : -1;
-	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Invalid message type received : %d\n", message.type);
+	int code = bytes > 0 ? 0 : -1;
+	ERROR_HANDLE_INT_RETURN_INT(code, "getAllDirectoryFiles(): Unable to receive the message\n");
 
 	///// Receive the zip file
 	// Open the zip file
@@ -185,24 +161,20 @@ int getAllDirectoryFiles() {
 	ERROR_HANDLE_PTR_RETURN_INT(fd, "getAllDirectoryFiles(): Unable to open the zip file\n");
 
 	// Receive the zip file
-	size_t received_bytes = 0;
-	while (received_bytes < message.size) {
+	byte zip_buffer[C_BUFFER_SIZE];
+	ssize_t bytes_remaining = message.size;
+	while (bytes_remaining > 0) {
 
-		// Read the socket into the c_buffer
-		size_t read_size = socket_read(g_client->socket, c_buffer, sizeof(c_buffer), 0);
-		STOUPY_CRYPTO(c_buffer, read_size, g_client->config.password);
-		c_code = read_size > 0 ? 0 : -1;
-		if (c_code == -1) fclose(fd);
-		ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to receive the zip file\n");
+		// Get the size of the buffer
+		size_t buffer_size = C_BUFFER_SIZE < bytes_remaining ? C_BUFFER_SIZE - 1 : bytes_remaining;
 
-		// Write the c_buffer into the file
-		bytes = fwrite(c_buffer, sizeof(byte), read_size, fd);
-		c_code = bytes == read_size ? 0 : -1;
-		if (c_code == -1) fclose(fd);
-		ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to write the zip file\n");
+		// Read the file into the buffer
+		socket_read(g_client->socket, zip_buffer, buffer_size, 0);
+		STOUPY_CRYPTO(zip_buffer, buffer_size, g_client->config.password);
+		fwrite(zip_buffer, sizeof(byte), buffer_size, fd);
 
-		// Update the received bytes
-		received_bytes += read_size;
+		// Update the bytes remaining
+		bytes_remaining -= buffer_size;
 	}
 
 	// Close the zip file
@@ -215,12 +187,12 @@ int getAllDirectoryFiles() {
 	#else
 		sprintf(command, "unzip -o '%s' -d '%s'", ZIP_TEMPORARY_FILE, g_client->config.directory);
 	#endif
-	c_code = system(command);
-	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to unzip the zip file\n");
+	code = system(command);
+	ERROR_HANDLE_INT_RETURN_INT(code, "getAllDirectoryFiles(): Unable to unzip the zip file\n");
 
 	// Remove the zip file
-	c_code = remove(ZIP_TEMPORARY_FILE);
-	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to remove the zip file\n");
+	code = remove(ZIP_TEMPORARY_FILE);
+	ERROR_HANDLE_INT_RETURN_INT(code, "getAllDirectoryFiles(): Unable to remove the zip file\n");
 
 	// Print the message
 	INFO_PRINT("getAllDirectoryFiles(): Directory files received\n");
@@ -240,30 +212,37 @@ int getAllDirectoryFiles() {
  */
 int on_client_file_change_handler(const char *filepath, const char *new_filepath, message_type_t action) {
 
+	///// Connect to the server on the send port
+	// Create the socket
+	SOCKET send_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	int code = send_socket == INVALID_SOCKET ? -1 : 0;
+	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to create the socket\n");
+
+	// Create the address
+	struct sockaddr_in send_addr;
+	memset(&send_addr, 0, sizeof(struct sockaddr_in));
+	send_addr.sin_family = AF_INET;
+	send_addr.sin_port = htons(g_client->config.port + 1);
+	send_addr.sin_addr.s_addr = inet_addr(g_client->config.ip);
+
+	// Connect to the server
+	code = connect(send_socket, (struct sockaddr *)&send_addr, sizeof(struct sockaddr_in));
+	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to connect to the server\n");
+
+	///// Send the message
 	// Variables
-	int code = 0;
+	byte action_buffer[C_BUFFER_SIZE];
 	int filepath_size = strlen(filepath) + 1;
 	int new_filepath_size = new_filepath != NULL ? strlen(new_filepath) + 1 : 0;
 	message_t message;
+	memset(&message, 0, sizeof(message_t));
 	message.type = action;
-	message.message = NULL;
-	message.size = 0;
+	message.size = filepath_size;
 	size_t bytes;
 
 	// Lock the mutex
 	pthread_mutex_lock(&g_client->mutex);
 	INFO_PRINT("on_client_file_change_handler(): Mutex locked for file '%s'\n", filepath);
-
-	///// Send the message through the socket
-	// Copy the first filepath into the c_buffer
-	memcpy(c_buffer, filepath, filepath_size);
-	STOUPY_CRYPTO(c_buffer, filepath_size, g_client->config.password);
-
-	// Create the message
-	message.message = malloc(filepath_size * sizeof(byte));
-	ERROR_HANDLE_PTR_RETURN_INT(message.message, "on_client_file_change_handler(): Unable to allocate memory for the message\n");
-	memcpy(message.message, c_buffer, filepath_size);
-	message.size = filepath_size;
 
 	// Send the message through the socket
 	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
@@ -271,16 +250,16 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 	code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to send the message\n");
 
-	// Send the message.message through the socket
-	bytes = socket_write(g_client->socket, message.message, message.size, 0);
+	// Send the filepath through the socket
+	char *filepath_to_send = strdup(filepath);
+	STOUPY_CRYPTO(filepath_to_send, filepath_size, g_client->config.password);
+	bytes = socket_write(g_client->socket, filepath_to_send, filepath_size, 0);
 	code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to send the message.message\n");
-
-	// Free the message
-	free(message.message);
 	INFO_PRINT("on_client_file_change_handler(): Message sent\n");
+	free(filepath_to_send);
 
-	// Switch case on the action type
+	///// Switch case on the action type
 	switch (action) {
 
 
@@ -311,9 +290,8 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 	ERROR_HANDLE_PTR_RETURN_INT(file, "on_client_file_change_handler(): Unable to open the file\n");
 
 	// Send the size of the file
-	size_t file_size = 0;
 	fseek(file, 0, SEEK_END);
-	file_size = ftell(file);
+	size_t file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
 	size_t file_size_crypted = file_size;
 	STOUPY_CRYPTO(&file_size_crypted, sizeof(size_t), g_client->config.password);
@@ -330,9 +308,9 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 		size_t buffer_size = C_BUFFER_SIZE < bytes_remaining ? C_BUFFER_SIZE - 1 : bytes_remaining;
 
 		// Read the file into the buffer
-		fread(c_buffer, sizeof(byte), buffer_size, file);
-		//STOUPY_CRYPTO(c_buffer, buffer_size, g_client->config.password);
-		socket_write(g_client->socket, c_buffer, buffer_size, 0);
+		fread(action_buffer, sizeof(byte), buffer_size, file);
+		STOUPY_CRYPTO(action_buffer, buffer_size, g_client->config.password);
+		socket_write(g_client->socket, action_buffer, buffer_size, 0);
 
 		// Update the bytes remaining
 		bytes_remaining -= buffer_size;
@@ -367,18 +345,15 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 	code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to send the new filepath size\n");
 
-	// Copy the new filepath into the c_buffer
-	memcpy(c_buffer, new_filepath, new_filepath_size);
-	STOUPY_CRYPTO(c_buffer, new_filepath_size, g_client->config.password);
-
 	// Send the new filepath through the socket
-	bytes = socket_write(g_client->socket, c_buffer, new_filepath_size, 0);
+	char *new_filepath_crypted = strdup(action_buffer);
+	STOUPY_CRYPTO(new_filepath_crypted, new_filepath_size, g_client->config.password);
+	bytes = socket_write(g_client->socket, new_filepath_crypted, new_filepath_size, 0);
 	code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to send the new filepath\n");
+	INFO_PRINT("on_client_file_change_handler(): New filepath sent\n");
+	free(new_filepath_crypted);
 }
-			break;
-		
-		default:
 			break;
 	}
 

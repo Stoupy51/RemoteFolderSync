@@ -14,7 +14,6 @@ typedef struct {
 	SOCKET socket;
 	pthread_t thread;
 	pthread_mutex_t mutex;
-	pthread_cond_t zip_file_received;
 
 	struct sockaddr_in address;
 

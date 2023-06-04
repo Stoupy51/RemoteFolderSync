@@ -40,16 +40,17 @@ int main() {
 	// Read configuration file
 	config = read_config_file();
 	code = config.port == 0 ? -1 : 0;
-	ERROR_HANDLE_INT_RETURN_INT(code, "main(): Unable to read the configuration file\n");
+	ERROR_HANDLE_INT_RETURN_INT(code, "main(): Error while reading the configuration file\n");
 	INFO_PRINT("main(): Configuration file read\n");
 
-	// Setup the TCP server
+	// Setup the TCP servers
 	tcp_server_t tcp_server;
 	code = setup_tcp_server(config, &tcp_server);
-	ERROR_HANDLE_INT_RETURN_INT(code, "main(): Unable to setup the TCP server\n");
+	ERROR_HANDLE_INT_RETURN_INT(code, "main(): Error while setting up the TCP server\n");
 
 	// Wait for the server to finish
-	tcp_server_run(&tcp_server);
+	code = tcp_server_run(&tcp_server);
+	ERROR_HANDLE_INT_RETURN_INT(code, "main(): Error while running the TCP server\n");
 
 	// Final print and return
 	INFO_PRINT("main(): End of program\n");
