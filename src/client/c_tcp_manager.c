@@ -2,6 +2,7 @@
 #include "c_tcp_manager.h"
 #include "../utils.h"
 #include "../file_watcher.h"
+#include "../universal_utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,9 +13,11 @@
 	int c_winsock_init = 0;
 #endif
 
+#define C_BUFFER_SIZE CS_BUFFER_SIZE
+
 // Global variables
 int c_code;
-byte c_buffer[CS_BUFFER_SIZE];
+byte c_buffer[C_BUFFER_SIZE];
 tcp_client_t *g_client;
 
 /**
@@ -134,7 +137,7 @@ thread_return_type tcp_client_thread(thread_param_type arg) {
 	message.message = NULL;
 	message.size = 0;
 	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
-	c_code = socket_write(g_client->socket, &message, sizeof(message_t)) > 0 ? 0 : -1;
+	c_code = socket_write(g_client->socket, &message, sizeof(message_t), 0) > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(c_code, "tcp_client_thread(): Unable to send the message\n");
 	INFO_PRINT("tcp_client_thread(): Disconnected from the server\n");
 
@@ -162,12 +165,12 @@ int getAllDirectoryFiles() {
 
 	// Send the message through the socket
 	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
-	bytes = socket_write(g_client->socket, &message, sizeof(message_t));
+	bytes = socket_write(g_client->socket, &message, sizeof(message_t), 0);
 	c_code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to send the message\n");
 
 	// Receive the message through the socket
-	bytes = socket_read(g_client->socket, &message, sizeof(message_t));
+	bytes = socket_read(g_client->socket, &message, sizeof(message_t), 0);
 	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
 	c_code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(c_code, "getAllDirectoryFiles(): Unable to receive the message\n");
@@ -186,7 +189,7 @@ int getAllDirectoryFiles() {
 	while (received_bytes < message.size) {
 
 		// Read the socket into the c_buffer
-		size_t read_size = socket_read(g_client->socket, c_buffer, sizeof(c_buffer));
+		size_t read_size = socket_read(g_client->socket, c_buffer, sizeof(c_buffer), 0);
 		STOUPY_CRYPTO(c_buffer, read_size, g_client->config.password);
 		c_code = read_size > 0 ? 0 : -1;
 		if (c_code == -1) fclose(fd);
@@ -264,12 +267,12 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 
 	// Send the message through the socket
 	STOUPY_CRYPTO(&message, sizeof(message_t), g_client->config.password);
-	bytes = socket_write(g_client->socket, &message, sizeof(message_t));
+	bytes = socket_write(g_client->socket, &message, sizeof(message_t), 0);
 	code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to send the message\n");
 
 	// Send the message.message through the socket
-	bytes = socket_write(g_client->socket, message.message, message.size);
+	bytes = socket_write(g_client->socket, message.message, message.size, 0);
 	code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to send the message.message\n");
 
@@ -292,6 +295,17 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 	sprintf(real_filepath, "%s%s", g_client->config.directory, filepath);
 	INFO_PRINT("on_client_file_change_handler(): Real filepath : '%s'\n", real_filepath);
 
+	// Wait for the file to be fully accessible (10 tries, 1 second each)
+	int tries = 10;
+	while (tries > 0) {
+		if ((code = file_accessible(real_filepath)) == 0)
+			break;
+		WARNING_PRINT("on_client_file_created(): File not accessible yet, waiting... (%d tries left)\n", tries);
+		tries--;
+		sleep(1);
+	}
+	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_created(): File '%s' not accessible\n", real_filepath);
+
 	// Open the file
 	FILE *file = fopen(real_filepath, "rb");
 	ERROR_HANDLE_PTR_RETURN_INT(file, "on_client_file_change_handler(): Unable to open the file\n");
@@ -303,27 +317,27 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 	fseek(file, 0, SEEK_SET);
 	size_t file_size_crypted = file_size;
 	STOUPY_CRYPTO(&file_size_crypted, sizeof(size_t), g_client->config.password);
-	bytes = socket_write(g_client->socket, &file_size_crypted, sizeof(size_t));
+	bytes = socket_write(g_client->socket, &file_size_crypted, sizeof(size_t), 0);
 	code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to send the file size\n");
 	INFO_PRINT("on_client_file_change_handler(): File size crypted : %zu\n", file_size);
 
 	// Send the file
-	size_t bytes_remaining = file_size;
+	ssize_t bytes_remaining = file_size;
 	while (bytes_remaining > 0) {
 
 		// Get the size of the buffer
-		size_t buffer_size = CS_BUFFER_SIZE < bytes_remaining ? CS_BUFFER_SIZE : bytes_remaining;
-		INFO_PRINT("on_client_file_change_handler(): Bytes remaining : %zu / %zu\n", bytes_remaining, file_size);
+		size_t buffer_size = C_BUFFER_SIZE < bytes_remaining ? C_BUFFER_SIZE - 1 : bytes_remaining;
 
 		// Read the file into the buffer
 		fread(c_buffer, sizeof(byte), buffer_size, file);
 		//STOUPY_CRYPTO(c_buffer, buffer_size, g_client->config.password);
-		socket_write(g_client->socket, c_buffer, buffer_size);
+		socket_write(g_client->socket, c_buffer, buffer_size, 0);
 
 		// Update the bytes remaining
 		bytes_remaining -= buffer_size;
 	}
+	INFO_PRINT("on_client_file_change_handler(): File sent\n");
 
 	// Close the file
 	fclose(file);
@@ -349,7 +363,7 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 	// Send the size of the new filepath
 	size_t new_filepath_size_crypted = new_filepath_size;
 	STOUPY_CRYPTO(&new_filepath_size_crypted, sizeof(size_t), g_client->config.password);
-	bytes = socket_write(g_client->socket, &new_filepath_size_crypted, sizeof(size_t));
+	bytes = socket_write(g_client->socket, &new_filepath_size_crypted, sizeof(size_t), 0);
 	code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to send the new filepath size\n");
 
@@ -358,7 +372,7 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 	STOUPY_CRYPTO(c_buffer, new_filepath_size, g_client->config.password);
 
 	// Send the new filepath through the socket
-	bytes = socket_write(g_client->socket, c_buffer, new_filepath_size);
+	bytes = socket_write(g_client->socket, c_buffer, new_filepath_size, 0);
 	code = bytes > 0 ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to send the new filepath\n");
 }

@@ -5,7 +5,7 @@
 #include "../utils.h"
 
 #define ZIP_TEMPORARY_FILE "remote_folder_sync_temp.zip"
-#define CS_BUFFER_SIZE 1024 * 1024 * 64		// 64 MB
+#define CS_BUFFER_SIZE 1024 * 1024		// 1 MB
 
 
 // Message types

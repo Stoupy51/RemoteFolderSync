@@ -1,6 +1,7 @@
 
 #include "s_tcp_manager.h"
 #include "../utils.h"
+#include "../universal_utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,9 +12,11 @@
 	int s_winsock_init = 0;
 #endif
 
+#define S_BUFFER_SIZE CS_BUFFER_SIZE
+
 // Global variables
 int s_code;
-byte s_buffer[CS_BUFFER_SIZE];
+byte s_buffer[S_BUFFER_SIZE];
 tcp_server_t *g_server;
 
 /**
@@ -161,7 +164,7 @@ thread_return_type tcp_client_thread_from_server(thread_param_type arg) {
 	while (client->socket != 0) {
 		
 		// Receive the message
-		socket_read(client->socket, &message, sizeof(message_t));
+		socket_read(client->socket, &message, sizeof(message_t), 0);
 		STOUPY_CRYPTO(&message, sizeof(message_t), g_server->config.password);
 
 		// Handle the message
@@ -225,9 +228,9 @@ thread_return_type tcp_client_thread_from_server(thread_param_type arg) {
 
 			default:
 				ERROR_PRINT("TCP Client #%d: Unknown message type %d\n", client->id, message.type);
-				INFO_PRINT("TCP Client #%d: Closing the connection\n", client->id);
-				socket_close(client->socket);
-				client->socket = 0;
+				//INFO_PRINT("TCP Client #%d: Closing the connection\n", client->id);
+				//socket_close(client->socket);
+				//client->socket = 0;
 				break;
 		}
 
@@ -278,7 +281,7 @@ int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
 	message.message = NULL;
 	message.size = zip_file_size;
 	STOUPY_CRYPTO(&message, sizeof(message_t), g_server->config.password);
-	s_code = socket_write(client->socket, &message, sizeof(message_t)) == sizeof(message_t) ? 0 : -1;
+	s_code = socket_write(client->socket, &message, sizeof(message_t), 0) == sizeof(message_t) ? 0 : -1;
 	ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to send the zip file size\n");
 
 	// Send the zip file
@@ -292,7 +295,7 @@ int sendAllDirectoryFiles(tcp_client_from_server_t *client) {
 
 		// Send the zip file
 		STOUPY_CRYPTO(s_buffer, read_size, g_server->config.password);
-		size_t written = socket_write(client->socket, s_buffer, read_size);
+		size_t written = socket_write(client->socket, s_buffer, read_size, 0);
 		s_code = (written == read_size) ? 0 : -1;
 		if (s_code == -1) fclose(zip_file);
 		ERROR_HANDLE_INT_RETURN_INT(s_code, "sendAllDirectoryFiles(): Unable to send the zip file\n");
@@ -329,8 +332,9 @@ int handle_action_from_client(tcp_client_from_server_t *client, message_t *messa
 	INFO_PRINT("handle_action_from_client(): Mutex locked\n");
 
 	// Receive the file message
-	message->message = malloc(message->size);
-	s_code = socket_read(client->socket, message->message, message->size) > 0 ? 0 : -1;
+	message->message = malloc(message->size + 1);
+	memset(message->message, '\0', message->size + 1);
+	s_code = socket_read(client->socket, message->message, message->size, 0) > 0 ? 0 : -1;
 	STOUPY_CRYPTO(message->message, message->size, g_server->config.password);
 	if (s_code == -1) {
 		free(message->message);
@@ -344,9 +348,6 @@ int handle_action_from_client(tcp_client_from_server_t *client, message_t *messa
 	sprintf(filepath, "%s%s", g_server->config.directory, message->message);
 	INFO_PRINT("handle_action_from_client(): Paste file path : '%s'\n", filepath);
 
-	// Free the message
-	free(message->message);
-
 	// Switch case on the message type (action)
 	switch (message->type) {
 
@@ -359,7 +360,7 @@ int handle_action_from_client(tcp_client_from_server_t *client, message_t *messa
 	///// Read the file content
 	// Receive the file size
 	size_t file_size = 0;
-	s_code = socket_read(client->socket, &file_size, sizeof(size_t)) > 0 ? 0 : -1;
+	s_code = socket_read(client->socket, &file_size, sizeof(size_t), 0) > 0 ? 0 : -1;
 	STOUPY_CRYPTO(&file_size, sizeof(size_t), g_server->config.password);
 	if (s_code == -1) pthread_mutex_unlock(&g_server->mutex);
 	ERROR_HANDLE_INT_RETURN_INT(s_code, "handle_action_from_client(): Unable to receive the file size\n");
@@ -371,15 +372,14 @@ int handle_action_from_client(tcp_client_from_server_t *client, message_t *messa
 	ERROR_HANDLE_PTR_RETURN_INT(file, "handle_action_from_client(): Unable to open the file\n");
 
 	// Receive the file
-	size_t bytes_remaining = file_size;
+	ssize_t bytes_remaining = file_size;
 	while (bytes_remaining > 0) {
 
 		// Get the buffer size
-		size_t buffer_size = CS_BUFFER_SIZE < bytes_remaining ? CS_BUFFER_SIZE : bytes_remaining;
-		INFO_PRINT("handle_action_from_client(): Bytes remaining : %zu / %zu\n", bytes_remaining, file_size);
+		size_t buffer_size = S_BUFFER_SIZE < bytes_remaining ? S_BUFFER_SIZE - 1 : bytes_remaining;
 
 		// Read the file from the socket into the file
-		socket_read(client->socket, s_buffer, buffer_size);
+		socket_read(client->socket, s_buffer, buffer_size, 0);
 		//STOUPY_CRYPTO(s_buffer, buffer_size, g_server->config.password);
 		fwrite(s_buffer, sizeof(byte), buffer_size, file);
 
@@ -404,7 +404,7 @@ int handle_action_from_client(tcp_client_from_server_t *client, message_t *messa
 		INFO_PRINT("handle_action_from_client(): File deleted\n");
 	}
 	else {
-		WARNING_PRINT("handle_action_from_client(): Unable to delete the file '%s'\n", filepath);
+		WARNING_PRINT("handle_action_from_client(): Unable to delete the file '%s'\n", message->message);
 	}
 }
 			break;
@@ -418,7 +418,7 @@ int handle_action_from_client(tcp_client_from_server_t *client, message_t *messa
 {
 	// Receive the new file name
 	char new_filepath[1024];
-	s_code = socket_read(client->socket, new_filepath, sizeof(new_filepath)) > 0 ? 0 : -1;
+	s_code = socket_read(client->socket, new_filepath, sizeof(new_filepath), 0) > 0 ? 0 : -1;
 	STOUPY_CRYPTO(new_filepath, sizeof(new_filepath), g_server->config.password);
 	if (s_code == -1) pthread_mutex_unlock(&g_server->mutex);
 	ERROR_HANDLE_INT_RETURN_INT(s_code, "handle_action_from_client(): Unable to receive the new file name\n");
@@ -429,7 +429,7 @@ int handle_action_from_client(tcp_client_from_server_t *client, message_t *messa
 		INFO_PRINT("handle_action_from_client(): File renamed\n");
 	}
 	else {
-		WARNING_PRINT("handle_action_from_client(): Unable to rename the file '%s'\n", filepath);
+		WARNING_PRINT("handle_action_from_client(): Unable to rename the file '%s'\n", message->message);
 	}
 }
 			break;
@@ -437,6 +437,9 @@ int handle_action_from_client(tcp_client_from_server_t *client, message_t *messa
 		default:
 			break;
 	}
+
+	// Free the message
+	free(message->message);
 
 	// Unlock the mutex
 	pthread_mutex_unlock(&g_server->mutex);

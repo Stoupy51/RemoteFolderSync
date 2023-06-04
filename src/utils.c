@@ -149,3 +149,30 @@ int get_line_from_file(char **lineptr, int fd) {
 	return 0;
 }
 
+/**
+ * @brief Function that checks if a file is accessible.
+ * 
+ * @param path	Path of the file to check.
+ * 
+ * @return int	0 if the file is accessible, -1 otherwise.
+*/
+int file_accessible(char* path) {
+	
+	// Open the file
+	int fd = open(path, O_RDONLY);
+
+	// If the file is not accessible, return -1
+	if (fd == -1)
+		return -1;
+	
+	// If the file is not readable, return -1
+	byte c;
+	int code = (read(fd, &c, 1) == 1) ? 0 : -1;
+
+	// Close the file
+	close(fd);
+
+	// Return success
+	return code;
+}
+
