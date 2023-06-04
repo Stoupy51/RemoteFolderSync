@@ -203,8 +203,6 @@ thread_return_type tcp_server_handle_client_requests(thread_param_type arg) {
 
 	// Variables
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
-	char* client_ip = NULL;
-	int client_port = 0;
 
 	// Accept connections
 	while (g_server->handle_client_requests.socket != INVALID_SOCKET) {
@@ -331,10 +329,7 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 	memset(filename, 0, sizeof(filename));
 	code = socket_read(client.socket, filename, message->size, 0);
 	STOUPY_CRYPTO(filename, message->size, g_server->config.password);
-	if (code == -1) {
-		free(filename);
-		ERROR_HANDLE_INT_RETURN_INT(code, "{%s:%d} Error while receiving the file name\n", client.ip, client.port);
-	}
+	ERROR_HANDLE_INT_RETURN_INT(code, "{%s:%d} Error while receiving the file name\n", client.ip, client.port);
 	INFO_PRINT("{%s:%d} Received file name '%s'\n", client.ip, client.port, filename);
 
 	// Get the file path
@@ -433,9 +428,6 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 		default:
 			break;
 	}
-
-	// Free the filename
-	free(filename);
 
 	// Return
 	return 0;

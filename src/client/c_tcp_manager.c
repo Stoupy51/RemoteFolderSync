@@ -251,7 +251,7 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to send the message\n");
 
 	// Send the filepath through the socket
-	char *filepath_to_send = strdup(filepath);
+	char *filepath_to_send = strdup((char*)filepath);
 	STOUPY_CRYPTO(filepath_to_send, filepath_size, g_client->config.password);
 	bytes = socket_write(g_client->socket, filepath_to_send, filepath_size, 0);
 	code = bytes > 0 ? 0 : -1;
@@ -346,7 +346,7 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 	ERROR_HANDLE_INT_RETURN_INT(code, "on_client_file_change_handler(): Unable to send the new filepath size\n");
 
 	// Send the new filepath through the socket
-	char *new_filepath_crypted = strdup(action_buffer);
+	char *new_filepath_crypted = strdup((char*)action_buffer);
 	STOUPY_CRYPTO(new_filepath_crypted, new_filepath_size, g_client->config.password);
 	bytes = socket_write(g_client->socket, new_filepath_crypted, new_filepath_size, 0);
 	code = bytes > 0 ? 0 : -1;
@@ -355,7 +355,14 @@ int on_client_file_change_handler(const char *filepath, const char *new_filepath
 	free(new_filepath_crypted);
 }
 			break;
+		
+		default:
+			break;
 	}
+
+	// Close the socket
+	socket_close(g_client->socket);
+	INFO_PRINT("on_client_file_change_handler(): Socket closed\n");
 
 	// Unlock the mutex
 	pthread_mutex_unlock(&g_client->mutex);
