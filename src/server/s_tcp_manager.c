@@ -416,7 +416,13 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 		INFO_PRINT("{%s:%d} File '%s' correctly deleted\n", client.ip, client.port, filename);
 	}
 	else {
-		WARNING_PRINT("{%s:%d} Unable to delete file '%s'\n", client.ip, client.port, filename);
+		code = remove_directory(filepath);
+		if (code == 0) {
+			INFO_PRINT("{%s:%d} Folder '%s' correctly deleted\n", client.ip, client.port, filename);
+		}
+		else {
+			WARNING_PRINT("{%s:%d} Unable to delete folder '%s'\n", client.ip, client.port, filename);
+		}
 	}
 }
 			break;

@@ -19,7 +19,7 @@ void bytes_encrypter(byte* bytes, size_t size, string_t password) {
 		byte tmp = bytes[i];
 
 		// Encode the byte
-		bytes[i] = (bytes[i] ^ password.str[i % password.size]) + (i * 7);
+		bytes[i] = (bytes[i] ^ password.str[i % password.size]) + (i * 31);
 
 		// Avoid encoding to the '\0' character
 		if (bytes[i] == '\0')
@@ -44,10 +44,11 @@ void bytes_decrypter(byte* bytes, size_t size, string_t password) {
 		byte tmp = bytes[i];
 
 		// Decode the byte
-		bytes[i] = (bytes[i] - (i * 7)) ^ password.str[i % password.size];
+		bytes[i] = (bytes[i] - (i * 31)) ^ password.str[i % password.size];
 
 		// Avoid decoding to the '\0' character
 		if (bytes[i] == '\0')
 			bytes[i] = tmp;
 	}
 }
+

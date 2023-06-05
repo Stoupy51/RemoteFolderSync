@@ -233,3 +233,15 @@ int hash_string(char* str) {
 	return hash;
 }
 
+/**
+ * @brief Function that removes a directory.
+ * 
+ * @param path	Path of the directory to remove.
+ * 
+ * @return int	0 if the directory is removed, -1 otherwise.
+*/
+int remove_directory(char* path) {
+	return rmdir(path);
+	// TODO: Remove all the files in the directory
+}
+
