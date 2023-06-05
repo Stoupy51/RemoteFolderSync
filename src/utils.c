@@ -127,9 +127,6 @@ int get_line_from_file(char **lineptr, int fd) {
 			// Break
 			break;
 		}
-		else if (c == '\r') {
-			continue;
-		}
 
 		// Add the character to the buffer and continue
 		get_line_buffer[i] = c;
@@ -203,5 +200,36 @@ size_t get_file_size(int fd) {
 	struct stat64 st;
 	int code = fstat64(fd, &st);
 	return (code == 0) ? st.st_size : 0;
+}
+
+/**
+ * @brief Function that returns the hash value of a string.
+ * 
+ * @param str	String to hash.
+ * 
+ * @return int	Hash value of the string.
+*/
+int hash_string(char* str) {
+	
+	// Variables
+	int hash = 0;
+	int pow = 1;
+	int i = 0;
+
+	// Loop through the string
+	while (str[i] != '\0') {
+
+		// Add the character to the hash
+		hash += str[i] * pow;
+
+		// Increment the power
+		pow *= 31;
+
+		// Increment the index
+		i++;
+	}
+
+	// Return the hash
+	return hash;
 }
 

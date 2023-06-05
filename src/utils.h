@@ -57,6 +57,7 @@ char* readEntireFile(char* path);
 int get_line_from_file(char **lineptr, int fd);
 int file_accessible(char* path);
 size_t get_file_size(int fd);
+int hash_string(char* str);
 
 #endif
 

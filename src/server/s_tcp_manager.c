@@ -56,7 +56,6 @@ int setup_tcp_server(config_t config, tcp_server_t *tcp_server) {
 	tcp_server->handle_new_connections.socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	code = tcp_server->handle_new_connections.socket == INVALID_SOCKET ? -1 : 0;
 	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_server(): Error while creating the socket for handling connections\n");
-	DEBUG_PRINT("setup_tcp_server(): Socket created for handling connections\n");
 
 	// Setup the server address
 	struct sockaddr_in *addr = &tcp_server->handle_new_connections.address;
@@ -67,12 +66,10 @@ int setup_tcp_server(config_t config, tcp_server_t *tcp_server) {
 	// Bind the socket to the server address
 	code = bind(tcp_server->handle_new_connections.socket, (struct sockaddr *)addr, sizeof(struct sockaddr_in));
 	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_server(): Error while binding the socket for handling connections\n");
-	DEBUG_PRINT("setup_tcp_server(): Socket binded for handling connections\n");
 
 	// Listen for connections
 	code = listen(tcp_server->handle_new_connections.socket, 100);
 	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_server(): Error while listening for connections\n");
-	DEBUG_PRINT("setup_tcp_server(): Listening for connections\n");
 
 	// Initialize the mutex
 	pthread_mutex_init(&tcp_server->handle_new_connections.mutex, NULL);
@@ -82,7 +79,6 @@ int setup_tcp_server(config_t config, tcp_server_t *tcp_server) {
 	tcp_server->handle_client_requests.socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	code = tcp_server->handle_client_requests.socket == INVALID_SOCKET ? -1 : 0;
 	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_server(): Error while creating the socket for handling requests\n");
-	DEBUG_PRINT("setup_tcp_server(): Socket created for handling requests\n");
 
 	// Setup the server address
 	addr = &tcp_server->handle_client_requests.address;
@@ -93,12 +89,10 @@ int setup_tcp_server(config_t config, tcp_server_t *tcp_server) {
 	// Bind the socket to the server address
 	code = bind(tcp_server->handle_client_requests.socket, (struct sockaddr *)addr, sizeof(struct sockaddr_in));
 	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_server(): Error while binding the socket for handling requests\n");
-	DEBUG_PRINT("setup_tcp_server(): Socket binded for handling requests\n");
 
 	// Listen for connections
 	code = listen(tcp_server->handle_client_requests.socket, 100);
 	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_server(): Error while listening for connections\n");
-	DEBUG_PRINT("setup_tcp_server(): Listening for connections\n");
 
 	// Initialize the mutex
 	pthread_mutex_init(&tcp_server->handle_client_requests.mutex, NULL);
@@ -232,7 +226,20 @@ thread_return_type tcp_server_handle_client_requests(thread_param_type arg) {
 		DECRYPT_BYTES(&message, sizeof(message_t), g_server->config.password);
 
 		// Handle the message
-		code = handle_action_from_client(client, &message);
+		switch (message.type) {
+
+			case FILE_CREATED:
+			case FILE_MODIFIED:
+			case FILE_DELETED:
+			case FILE_RENAMED:
+				code = handle_action_from_client(client, &message);
+				break;
+
+			default:
+				ERROR_PRINT("{%s:%d} Invalid message type %d\n", client.ip, client.port, message.type);
+				code = -1;
+				break;
+		}
 
 		// Send the response
 		memset(&message, 0, sizeof(message_t));

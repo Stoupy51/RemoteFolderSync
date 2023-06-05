@@ -40,7 +40,8 @@ config_t read_config_file() {
 
 		// Get the key and the value
 		char *key = strtok(line, "=");
-		char *value = strtok(NULL, "=");
+		char *value = line + strlen(key) + 1;
+		value = strdup(value);
 
 		// Remove the \n at the end of the value if there is one
 		int len = strlen(value) - 1;
@@ -61,6 +62,14 @@ config_t read_config_file() {
 		else if (strcmp(key, "password") == 0) {
 			config.password.size = strlen(value);
 			config.password.str = strdup(value);
+			long hash = hash_string(value);
+			size_t i;
+			for (i = 0; i < config.password.size; i++) {
+				char c = config.password.str[i]; 
+				config.password.str[i] = (char) (config.password.str[i] ^ hash);
+				if (config.password.str[i] == '\0')
+					config.password.str[i] = c;
+			}
 		}
 
 		// Check if the key is ip
