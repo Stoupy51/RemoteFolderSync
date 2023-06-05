@@ -450,9 +450,9 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 	sprintf(new_filepath, "%s%s", g_server->config.directory, new_filename);
 
 	// Rename the file
-	code = rename(filepath, new_filename);
+	code = rename(filepath, new_filepath);
 	if (code == 0) {
-		INFO_PRINT("{%s:%d} File '%s' correctly renamed to '%s'\n", client.ip, client.port, filename, new_filename);
+		INFO_PRINT("{%s:%d} File '%s' correctly renamed to '%s'\n", client.ip, client.port, filename, new_filepath);
 	}
 	else {
 		WARNING_PRINT("{%s:%d} Unable to rename file '%s'\n", client.ip, client.port, filename);
