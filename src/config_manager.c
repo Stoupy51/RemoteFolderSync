@@ -17,7 +17,6 @@ config_t read_config_file() {
 	// Variables
 	config_t config;
 	memset(&config, 0, sizeof(config_t));
-	char *line = NULL;
 
 	// Try to open the file
 	int fd = open(CONFIG_FILE, O_RDONLY);
@@ -32,6 +31,7 @@ config_t read_config_file() {
 	}
 
 	// Read the file line by line
+	char *line = NULL;
 	while (get_line_from_file(&line, fd) != -1) {
 
 		// Check if the line is empty
@@ -59,9 +59,8 @@ config_t read_config_file() {
 
 		// Check if the key is password
 		else if (strcmp(key, "password") == 0) {
-			config.password.size = strlen(value) + 1;
-			config.password.str = malloc(config.password.size * sizeof(char));
-			strcpy(config.password.str, value);
+			config.password.size = strlen(value);
+			config.password.str = strdup(value);
 		}
 
 		// Check if the key is ip

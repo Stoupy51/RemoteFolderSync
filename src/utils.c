@@ -95,7 +95,7 @@ char* readEntireFile(char* path) {
 	return buffer;
 }
 
-char get_line_buffer[16384];
+#define GET_LINE_BUFFER_SIZE 16384
 
 /**
  * @brief Function that reads a line from a file with a limit of 16384 characters.
@@ -109,7 +109,8 @@ char get_line_buffer[16384];
 int get_line_from_file(char **lineptr, int fd) {
 
 	// Variables
-	memset(get_line_buffer, '\0', sizeof(get_line_buffer));
+	char get_line_buffer[GET_LINE_BUFFER_SIZE];
+	memset(get_line_buffer, 0, GET_LINE_BUFFER_SIZE);
 	int i = 0;
 	char c;
 
@@ -126,10 +127,15 @@ int get_line_from_file(char **lineptr, int fd) {
 			// Break
 			break;
 		}
+		else if (c == '\r') {
+			continue;
+		}
 
 		// Add the character to the buffer and continue
 		get_line_buffer[i] = c;
 		i++;
+		if (i == (GET_LINE_BUFFER_SIZE - 1))
+			break;
 	}
 
 	// If the buffer is empty, return -1 (end of file)
@@ -140,11 +146,20 @@ int get_line_from_file(char **lineptr, int fd) {
 	get_line_buffer[i] = '\0';
 
 	// If the lineptr is NULL, allocate it
-	if (*lineptr == NULL)
+	if (*lineptr == NULL) {
 		ERROR_HANDLE_PTR_RETURN_INT((*lineptr = malloc(i + 1)), "get_line_from_file(): Unable to allocate the lineptr\n");
+	}
+
+	// If the lineptr is too small, reallocate it
+	else {
+		size_t lineptr_size = strlen(*lineptr);
+		size_t possible_new_size = i + 1;
+		if (lineptr_size < possible_new_size)
+			ERROR_HANDLE_PTR_RETURN_INT((*lineptr = realloc(*lineptr, possible_new_size)), "get_line_from_file(): Unable to reallocate the lineptr\n");
+	}
 
 	// Copy the buffer to the lineptr
-	strcpy(*lineptr, get_line_buffer);
+	memcpy(*lineptr, get_line_buffer, i + 1);
 
 	// Return success
 	return 0;
