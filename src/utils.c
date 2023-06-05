@@ -2,8 +2,10 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "utils.h"
+#include "universal_utils.h"
 
 /**
  * @brief This function initializes the main program by
@@ -71,8 +73,7 @@ char* readEntireFile(char* path) {
 	ERROR_HANDLE_INT_RETURN_NULL(fd, "readEntireFile(): Cannot open file '%s'\n", path);
 
 	// Get the size of the file
-	int size = lseek(fd, 0, SEEK_END);
-	lseek(fd, 0, SEEK_SET);
+	size_t size = get_file_size(fd);
 
 	// Allocate memory for the file content
 	char* buffer = malloc(sizeof(char) * (size + 1));
@@ -174,5 +175,18 @@ int file_accessible(char* path) {
 
 	// Return success
 	return code;
+}
+
+/**
+ * @brief Function that gets the size of a file.
+ * 
+ * @param fd	File descriptor of the file to get the size.
+ * 
+ * @return size_t	Size of the file.
+*/
+size_t get_file_size(int fd) {
+	struct stat64 st;
+	int code = fstat64(fd, &st);
+	return (code == 0) ? st.st_size : 0;
 }
 

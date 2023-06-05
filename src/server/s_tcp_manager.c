@@ -56,7 +56,7 @@ int setup_tcp_server(config_t config, tcp_server_t *tcp_server) {
 	tcp_server->handle_new_connections.socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	code = tcp_server->handle_new_connections.socket == INVALID_SOCKET ? -1 : 0;
 	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_server(): Error while creating the socket for handling connections\n");
-	INFO_PRINT("setup_tcp_server(): Socket created for handling connections\n");
+	DEBUG_PRINT("setup_tcp_server(): Socket created for handling connections\n");
 
 	// Setup the server address
 	struct sockaddr_in *addr = &tcp_server->handle_new_connections.address;
@@ -67,12 +67,12 @@ int setup_tcp_server(config_t config, tcp_server_t *tcp_server) {
 	// Bind the socket to the server address
 	code = bind(tcp_server->handle_new_connections.socket, (struct sockaddr *)addr, sizeof(struct sockaddr_in));
 	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_server(): Error while binding the socket for handling connections\n");
-	INFO_PRINT("setup_tcp_server(): Socket binded for handling connections\n");
+	DEBUG_PRINT("setup_tcp_server(): Socket binded for handling connections\n");
 
 	// Listen for connections
 	code = listen(tcp_server->handle_new_connections.socket, 100);
 	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_server(): Error while listening for connections\n");
-	INFO_PRINT("setup_tcp_server(): Listening for connections\n");
+	DEBUG_PRINT("setup_tcp_server(): Listening for connections\n");
 
 	// Initialize the mutex
 	pthread_mutex_init(&tcp_server->handle_new_connections.mutex, NULL);
@@ -82,7 +82,7 @@ int setup_tcp_server(config_t config, tcp_server_t *tcp_server) {
 	tcp_server->handle_client_requests.socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	code = tcp_server->handle_client_requests.socket == INVALID_SOCKET ? -1 : 0;
 	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_server(): Error while creating the socket for handling requests\n");
-	INFO_PRINT("setup_tcp_server(): Socket created for handling requests\n");
+	DEBUG_PRINT("setup_tcp_server(): Socket created for handling requests\n");
 
 	// Setup the server address
 	addr = &tcp_server->handle_client_requests.address;
@@ -93,15 +93,18 @@ int setup_tcp_server(config_t config, tcp_server_t *tcp_server) {
 	// Bind the socket to the server address
 	code = bind(tcp_server->handle_client_requests.socket, (struct sockaddr *)addr, sizeof(struct sockaddr_in));
 	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_server(): Error while binding the socket for handling requests\n");
-	INFO_PRINT("setup_tcp_server(): Socket binded for handling requests\n");
+	DEBUG_PRINT("setup_tcp_server(): Socket binded for handling requests\n");
 
 	// Listen for connections
 	code = listen(tcp_server->handle_client_requests.socket, 100);
 	ERROR_HANDLE_INT_RETURN_INT(code, "setup_tcp_server(): Error while listening for connections\n");
-	INFO_PRINT("setup_tcp_server(): Listening for connections\n");
+	DEBUG_PRINT("setup_tcp_server(): Listening for connections\n");
 
 	// Initialize the mutex
 	pthread_mutex_init(&tcp_server->handle_client_requests.mutex, NULL);
+
+	// Info print
+	INFO_PRINT("setup_tcp_server(): TCP server setup successfully\n");
 
 	// Return
 	return 0;
@@ -269,10 +272,8 @@ int sendAllDirectoryFiles(SOCKET client_socket) {
 	ERROR_HANDLE_PTR_RETURN_INT(zip_file, "sendAllDirectoryFiles(): Unable to open the zip file\n");
 
 	///// Send the zip file
-	// Get the zip file size from FILE structure
-	fseek(zip_file, 0, SEEK_END);
-	size_t zip_file_size = ftell(zip_file);
-	fseek(zip_file, 0, SEEK_SET);
+	// Get the zip file size
+	size_t zip_file_size = get_file_size(fileno(zip_file));
 
 	// Send the zip file size
 	message_t message;
@@ -287,7 +288,7 @@ int sendAllDirectoryFiles(SOCKET client_socket) {
 	while (bytes_remaining > 0) {
 
 		// Get the size of the buffer
-		size_t buffer_size = S_BUFFER_SIZE < bytes_remaining ? S_BUFFER_SIZE - 1 : bytes_remaining;
+		size_t buffer_size = S_BUFFER_SIZE < bytes_remaining ? S_BUFFER_SIZE : bytes_remaining;
 
 		// Read the file into the buffer
 		fread(zip_buffer, sizeof(byte), buffer_size, zip_file);
@@ -321,6 +322,9 @@ int sendAllDirectoryFiles(SOCKET client_socket) {
  */
 int handle_action_from_client(client_info_t client, message_t *message) {
 
+	// Info print
+	DEBUG_PRINT("{%s:%d} Handling action %d from client\n", client.ip, client.port, message->type);
+
 	// Variables
 	int code = 0;
 
@@ -330,12 +334,12 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 	code = socket_read(client.socket, filename, message->size, 0);
 	STOUPY_CRYPTO(filename, message->size, g_server->config.password);
 	ERROR_HANDLE_INT_RETURN_INT(code, "{%s:%d} Error while receiving the file name\n", client.ip, client.port);
-	INFO_PRINT("{%s:%d} Received file name '%s'\n", client.ip, client.port, filename);
+	DEBUG_PRINT("{%s:%d} Received file name '%s'\n", client.ip, client.port, filename);
 
 	// Get the file path
 	char filepath[1024];
 	sprintf(filepath, "%s%s", g_server->config.directory, filename);
-	INFO_PRINT("{%s:%d} File path '%s'\n", client.ip, client.port, filepath);
+	DEBUG_PRINT("{%s:%d} File path '%s'\n", client.ip, client.port, filepath);
 
 	// Switch case on the message type (action)
 	switch (message->type) {
@@ -346,13 +350,16 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 		case FILE_CREATED:
 		case FILE_MODIFIED:
 {
+	// Info print
+	INFO_PRINT("{%s:%d} Receiving file '%s'\n", client.ip, client.port, filename);
+
 	///// Read the file content
 	// Receive the file size
 	size_t file_size = 0;
 	code = socket_read(client.socket, &file_size, sizeof(size_t), 0) > 0 ? 0 : -1;
 	STOUPY_CRYPTO(&file_size, sizeof(size_t), g_server->config.password);
 	ERROR_HANDLE_INT_RETURN_INT(code, "{%s:%d} Error while receiving the file size\n", client.ip, client.port);
-	INFO_PRINT("{%s:%d} Received file size '%zu'\n", client.ip, client.port, file_size);
+	DEBUG_PRINT("{%s:%d} Received file size '%zu'\n", client.ip, client.port, file_size);
 
 	// Open the file
 	FILE *file = fopen(filepath, "wb");
@@ -367,7 +374,7 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 	while (bytes_remaining > 0) {
 
 		// Get the buffer size
-		size_t buffer_size = S_BUFFER_SIZE < bytes_remaining ? S_BUFFER_SIZE - 1 : bytes_remaining;
+		size_t buffer_size = S_BUFFER_SIZE < bytes_remaining ? S_BUFFER_SIZE : bytes_remaining;
 
 		// Read the file from the socket into the file
 		socket_read(client.socket, action_buffer, buffer_size, 0);
@@ -380,7 +387,7 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 
 	// Close the file
 	fclose(file);
-	INFO_PRINT("{%s:%d} File received\n", client.ip, client.port);
+	INFO_PRINT("{%s:%d} File '%s' correctly received\n", client.ip, client.port, filename);
 }
 			break;
 
@@ -391,9 +398,13 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 		// Delete the file
 		case FILE_DELETED:
 {
+	// Info print
+	INFO_PRINT("{%s:%d} Deleting file '%s'\n", client.ip, client.port, filename);
+
+	// Delete the file
 	code = remove(filepath);
 	if (code == 0) {
-		INFO_PRINT("{%s:%d} File deleted\n", client.ip, client.port);
+		INFO_PRINT("{%s:%d} File '%s' correctly deleted\n", client.ip, client.port, filename);
 	}
 	else {
 		WARNING_PRINT("{%s:%d} Unable to delete file '%s'\n", client.ip, client.port, filename);
@@ -408,16 +419,31 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 		// Rename the file
 		case FILE_RENAMED:
 {
+	///// Receive the new file name
+	// Receive the new file name size
+	size_t new_filename_size = 0;
+	code = socket_read(client.socket, &new_filename_size, sizeof(size_t), 0) > 0 ? 0 : -1;
+	STOUPY_CRYPTO(&new_filename_size, sizeof(size_t), g_server->config.password);
+	ERROR_HANDLE_INT_RETURN_INT(code, "{%s:%d} Error while receiving the new file name size\n", client.ip, client.port);
+	DEBUG_PRINT("{%s:%d} Received new file name size '%zu'\n", client.ip, client.port, new_filename_size);
+
 	// Receive the new file name
-	char new_filepath[1024];
-	code = socket_read(client.socket, new_filepath, sizeof(new_filepath), 0) > 0 ? 0 : -1;
-	STOUPY_CRYPTO(new_filepath, sizeof(new_filepath), g_server->config.password);
+	char new_filename[1024];
+	code = socket_read(client.socket, new_filename, sizeof(new_filename), 0) > 0 ? 0 : -1;
+	STOUPY_CRYPTO(new_filename, sizeof(new_filename), g_server->config.password);
 	ERROR_HANDLE_INT_RETURN_INT(code, "{%s:%d} Error while receiving the new file name\n", client.ip, client.port);
 
+	// Info print
+	INFO_PRINT("{%s:%d} Renaming file '%s' to '%s'\n", client.ip, client.port, filename, new_filename);
+
+	// Get the new file path
+	char new_filepath[1024];
+	sprintf(new_filepath, "%s%s", g_server->config.directory, new_filename);
+
 	// Rename the file
-	code = rename(filepath, new_filepath);
+	code = rename(filepath, new_filename);
 	if (code == 0) {
-		INFO_PRINT("{%s:%d} File renamed\n", client.ip, client.port);
+		INFO_PRINT("{%s:%d} File '%s' correctly renamed to '%s'\n", client.ip, client.port, filename, new_filename);
 	}
 	else {
 		WARNING_PRINT("{%s:%d} Unable to rename file '%s'\n", client.ip, client.port, filename);
