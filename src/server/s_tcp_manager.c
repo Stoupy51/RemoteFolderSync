@@ -224,6 +224,8 @@ thread_return_type tcp_server_handle_client_requests(thread_param_type arg) {
 		client.port = ntohs(client.address.sin_port);
 		INFO_PRINT("{%s:%d} Connection accepted\n", client.ip, client.port);
 
+		// TODO : Should run a thread for each client
+
 		// Receive the request
 		message_t message;
 		socket_read(client.socket, &message, sizeof(message_t), 0);
