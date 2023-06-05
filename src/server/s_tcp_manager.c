@@ -229,7 +229,7 @@ thread_return_type tcp_server_handle_client_requests(thread_param_type arg) {
 		// Receive the request
 		message_t message;
 		socket_read(client.socket, &message, sizeof(message_t), 0);
-		STOUPY_CRYPTO(&message, sizeof(message_t), g_server->config.password);
+		DECRYPT_BYTES(&message, sizeof(message_t), g_server->config.password);
 
 		// Handle the message
 		code = handle_action_from_client(client, &message);
@@ -237,7 +237,7 @@ thread_return_type tcp_server_handle_client_requests(thread_param_type arg) {
 		// Send the response
 		memset(&message, 0, sizeof(message_t));
 		message.type = (code == 0) ? VALID_RESPONSE : -1;
-		STOUPY_CRYPTO(&message, sizeof(message_t), g_server->config.password);
+		ENCRYPT_BYTES(&message, sizeof(message_t), g_server->config.password);
 		socket_write(client.socket, &message, sizeof(message_t), 0);
 
 		// Close the connection
@@ -281,7 +281,7 @@ int sendAllDirectoryFiles(SOCKET client_socket) {
 	message_t message;
 	memset(&message, 0, sizeof(message_t));
 	message.size = zip_file_size;
-	STOUPY_CRYPTO(&message, sizeof(message_t), g_server->config.password);
+	ENCRYPT_BYTES(&message, sizeof(message_t), g_server->config.password);
 	socket_write(client_socket, &message, sizeof(message_t), 0);
 
 	// Send the zip file
@@ -294,7 +294,7 @@ int sendAllDirectoryFiles(SOCKET client_socket) {
 
 		// Read the file into the buffer
 		fread(zip_buffer, sizeof(byte), buffer_size, zip_file);
-		STOUPY_CRYPTO(zip_buffer, buffer_size, g_server->config.password);
+		ENCRYPT_BYTES(zip_buffer, buffer_size, g_server->config.password);
 		socket_write(client_socket, zip_buffer, buffer_size, 0);
 
 		// Update the bytes remaining
@@ -334,7 +334,7 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 	char filename[1024];
 	memset(filename, 0, sizeof(filename));
 	code = socket_read(client.socket, filename, message->size, 0);
-	STOUPY_CRYPTO(filename, message->size, g_server->config.password);
+	DECRYPT_BYTES(filename, message->size, g_server->config.password);
 	ERROR_HANDLE_INT_RETURN_INT(code, "{%s:%d} Error while receiving the file name\n", client.ip, client.port);
 	DEBUG_PRINT("{%s:%d} Received file name '%s'\n", client.ip, client.port, filename);
 
@@ -359,7 +359,7 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 	// Receive the file size
 	size_t file_size = 0;
 	code = socket_read(client.socket, &file_size, sizeof(size_t), 0) > 0 ? 0 : -1;
-	STOUPY_CRYPTO(&file_size, sizeof(size_t), g_server->config.password);
+	DECRYPT_BYTES(&file_size, sizeof(size_t), g_server->config.password);
 	ERROR_HANDLE_INT_RETURN_INT(code, "{%s:%d} Error while receiving the file size\n", client.ip, client.port);
 	DEBUG_PRINT("{%s:%d} Received file size '%zu'\n", client.ip, client.port, file_size);
 
@@ -380,7 +380,7 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 
 		// Read the file from the socket into the file
 		socket_read(client.socket, action_buffer, buffer_size, 0);
-		STOUPY_CRYPTO(action_buffer, buffer_size, g_server->config.password);
+		DECRYPT_BYTES(action_buffer, buffer_size, g_server->config.password);
 		fwrite(action_buffer, sizeof(byte), buffer_size, file);
 
 		// Update the bytes remaining
@@ -425,14 +425,14 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 	// Receive the new file name size
 	size_t new_filename_size = 0;
 	code = socket_read(client.socket, &new_filename_size, sizeof(size_t), 0) > 0 ? 0 : -1;
-	STOUPY_CRYPTO(&new_filename_size, sizeof(size_t), g_server->config.password);
+	DECRYPT_BYTES(&new_filename_size, sizeof(size_t), g_server->config.password);
 	ERROR_HANDLE_INT_RETURN_INT(code, "{%s:%d} Error while receiving the new file name size\n", client.ip, client.port);
 	DEBUG_PRINT("{%s:%d} Received new file name size '%zu'\n", client.ip, client.port, new_filename_size);
 
 	// Receive the new file name
 	char new_filename[1024];
 	code = socket_read(client.socket, new_filename, sizeof(new_filename), 0) > 0 ? 0 : -1;
-	STOUPY_CRYPTO(new_filename, sizeof(new_filename), g_server->config.password);
+	DECRYPT_BYTES(new_filename, sizeof(new_filename), g_server->config.password);
 	ERROR_HANDLE_INT_RETURN_INT(code, "{%s:%d} Error while receiving the new file name\n", client.ip, client.port);
 
 	// Info print
