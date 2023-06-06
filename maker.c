@@ -4,6 +4,8 @@
 #include <string.h>
 #include <fcntl.h>
 
+// TODO: Add a function to get the list of files in a folder recursively, to avoid using system commands
+
 #ifdef _WIN32
 	#include <direct.h>
 	#include <fileapi.h>
@@ -180,13 +182,20 @@ int createMakefileContent(char *content) {
 	// TODO: Write the compilation commands (On Linux)
 	#else
 
+		///// Get the list of files in the src folder recursively
+
 	#endif
 
 	// Write the clean rule
 	written += sprintf(content + written, "\nclean:\n");
 	written += sprintf(content + written, "\t@echo \"Cleaning the project...\"\n");
-	written += sprintf(content + written, "\t@$(foreach file, $(shell powershell -Command 'Get-ChildItem -Path " OBJ_FOLDER " -Filter *.o -Recurse | ForEach-Object {Resolve-Path (Join-Path $$_.DirectoryName $$_.Name) -Relative} | ForEach-Object { $$_.Replace(\"\\\", \"/\") } '), rm -f $(file);)\n");
-	written += sprintf(content + written, "\t@$(foreach file, $(shell powershell -Command 'Get-ChildItem -Path " BIN_FOLDER " -Filter *.exe -Recurse | ForEach-Object {Resolve-Path (Join-Path $$_.DirectoryName $$_.Name) -Relative} | ForEach-Object { $$_.Replace(\"\\\", \"/\") } '), rm -f $(file);)\n");
+	#ifdef _WIN32
+		written += sprintf(content + written, "\t@$(foreach file, $(shell powershell -Command 'Get-ChildItem -Path " OBJ_FOLDER " -Filter *.o -Recurse | ForEach-Object {Resolve-Path (Join-Path $$_.DirectoryName $$_.Name) -Relative} | ForEach-Object { $$_.Replace(\"\\\", \"/\") } '), rm -f $(file);)\n");
+		written += sprintf(content + written, "\t@$(foreach file, $(shell powershell -Command 'Get-ChildItem -Path " BIN_FOLDER " -Filter *.exe -Recurse | ForEach-Object {Resolve-Path (Join-Path $$_.DirectoryName $$_.Name) -Relative} | ForEach-Object { $$_.Replace(\"\\\", \"/\") } '), rm -f $(file);)\n");
+	#else
+		written += sprintf(content + written, "\t@$(foreach file, $(shell find " OBJ_FOLDER " -name \"*.o\"), rm -f $(file);)\n");
+		written += sprintf(content + written, "\t@$(foreach file, $(shell find " BIN_FOLDER " -name \"*.exe\"), rm -f $(file);)\n");
+	#endif
 	written += sprintf(content + written, "\t@echo \"Clean done\"\n\n");
 	
 	// Return
