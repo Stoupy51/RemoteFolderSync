@@ -223,14 +223,14 @@ int main() {
 	// Create the content of the Makefile
 	if (createMakefileContent(content) == -1) {
 		perror("Error while creating the content of the Makefile");
-		return 1;
+		return -1;
 	}
 
 	// Create the Makefile
 	int fd = open(MAKEFILE_NAME, O_CREAT | O_WRONLY | O_TRUNC, 0644);
 	if (fd == -1) {
 		perror("Error while creating the Makefile");
-		return 1;
+		return -1;
 	}
 
 	// Write the content of the Makefile
@@ -238,13 +238,13 @@ int main() {
 	int written_bytes = write(fd, content, strlen(content) * sizeof(char));
 	if (written_bytes == -1) {
 		perror("Error while writing the Makefile");
-		return 1;
+		return -1;
 	}
 
 	// Close the Makefile
 	if (close(fd) == -1) {
 		perror("Error while closing the Makefile");
-		return 1;
+		return -1;
 	}
 
 	// Free the content
