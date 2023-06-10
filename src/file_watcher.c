@@ -1,6 +1,6 @@
 
 #include "file_watcher.h"
-#include "utils.h"
+#include "global_utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -11,7 +11,7 @@
  * 
  * @return void
  */
-void bytes_encrypter(byte* bytes, size_t size, string_t password) {
+void bytes_encrypter(byte* bytes, size_t size, simple_string_t password) {
 	size_t i;
 	for (i = 0; i < size && bytes[i] != '\0'; i++) {
 
@@ -36,7 +36,7 @@ void bytes_encrypter(byte* bytes, size_t size, string_t password) {
  * 
  * @return void
  */
-void bytes_decrypter(byte* bytes, size_t size, string_t password) {
+void bytes_decrypter(byte* bytes, size_t size, simple_string_t password) {
 	size_t i;
 	for (i = 0; i < size && bytes[i] != '\0'; i++) {
 

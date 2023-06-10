@@ -1,6 +1,6 @@
 
 #include "s_tcp_manager.h"
-#include "../utils.h"
+#include "../global_utils.h"
 #include "../universal_utils.h"
 
 #include <stdio.h>

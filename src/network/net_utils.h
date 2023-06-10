@@ -2,7 +2,7 @@
 #ifndef __NETWORK_UTILS_H__
 #define __NETWORK_UTILS_H__
 
-#include "../utils.h"
+#include "../global_utils.h"
 #include "../universal_socket.h"
 
 #define ZIP_TEMPORARY_FILE "remote_folder_sync_temp.zip"
@@ -43,8 +43,8 @@ typedef struct {
 } message_t;
 
 // Functions prototypes
-void bytes_encrypter(byte* bytes, size_t size, string_t password);
-void bytes_decrypter(byte* bytes, size_t size, string_t password);
+void bytes_encrypter(byte* bytes, size_t size, simple_string_t password);
+void bytes_decrypter(byte* bytes, size_t size, simple_string_t password);
 #define ENCRYPT_BYTES(bytes, size, password) bytes_encrypter((byte*)bytes, size, password)
 #define DECRYPT_BYTES(bytes, size, password) bytes_decrypter((byte*)bytes, size, password)
 
