@@ -1,7 +1,7 @@
 
 #include <stdlib.h>
 
-#include "../src/global_utils.h"
+#include "../src/universal_utils.h"
 #include "../src/file_watcher.h"
 
 int code;

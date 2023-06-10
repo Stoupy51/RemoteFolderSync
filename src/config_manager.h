@@ -2,7 +2,7 @@
 #ifndef __CONFIG_MANAGER_H__
 #define __CONFIG_MANAGER_H__
 
-#include "global_utils.h"
+#include "universal_utils.h"
 
 #define CONFIG_FILE "config.ini"
 #define CONFIG_FILE_IN_BIN "bin/config.ini"

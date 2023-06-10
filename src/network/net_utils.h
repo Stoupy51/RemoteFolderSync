@@ -2,7 +2,7 @@
 #ifndef __NETWORK_UTILS_H__
 #define __NETWORK_UTILS_H__
 
-#include "../global_utils.h"
+#include "../universal_utils.h"
 #include "../universal_socket.h"
 
 #define ZIP_TEMPORARY_FILE "remote_folder_sync_temp.zip"
