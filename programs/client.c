@@ -18,7 +18,7 @@ void exitProgram() {
 	// Print end of program
 	INFO_PRINT("exitProgram(): End of program, press enter to exit\n");
 	getchar();
-	exit(0);
+	exit(EXIT_SUCCESS);;
 }
 
 /**
