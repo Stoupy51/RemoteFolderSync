@@ -1,9 +1,6 @@
 
 #include <stdlib.h>
 
-#include "../src/universal_utils.h"
-#include "../src/file_watcher.h"
-#include "../src/config_manager.h"
 #include "../src/client/c_tcp_manager.h"
 
 int code;

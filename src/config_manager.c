@@ -1,6 +1,5 @@
 
 #include "config_manager.h"
-#include "universal_utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>

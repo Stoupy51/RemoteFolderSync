@@ -2,10 +2,10 @@
 #ifndef __CLIENT_TCP_MANAGER_H__
 #define __CLIENT_TCP_MANAGER_H__
 
-#include "../config_manager.h"
 #include "../universal_socket.h"
 #include "../universal_pthread.h"
 #include "../network/net_utils.h"
+#include "../config_manager.h"
 
 // Structure of the TCP client
 typedef struct {

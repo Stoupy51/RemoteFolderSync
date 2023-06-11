@@ -2,8 +2,8 @@
 #ifndef __NETWORK_UTILS_H__
 #define __NETWORK_UTILS_H__
 
-#include "../universal_utils.h"
 #include "../universal_socket.h"
+#include "../universal_utils.h"
 
 #define ZIP_TEMPORARY_FILE "remote_folder_sync_temp.zip"
 #define CS_BUFFER_SIZE 1024 * 1024		// 1 MB
