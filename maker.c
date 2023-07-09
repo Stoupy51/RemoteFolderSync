@@ -5,6 +5,9 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#ifndef _WIN32
+	#include <unistd.h>
+#endif
 
 #if 1 == 1
 
@@ -531,7 +534,8 @@ int compile_programs() {
 	#ifdef _WIN32
 		char command[256] = "dir /b "PROGRAMS_FOLDER"\\*.c";
 	#else
-		char command[256] = "find "PROGRAMS_FOLDER" -name \"*.c\"";
+		// Ignore "programs/" in the path
+		char command[256] = "ls "PROGRAMS_FOLDER"/*.c | sed 's/"PROGRAMS_FOLDER"\\///'";
 	#endif
 
 	// Open the PIPE
