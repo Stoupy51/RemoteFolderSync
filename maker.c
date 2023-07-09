@@ -96,7 +96,7 @@ int clean_project() {
 	printf("Cleaning the project...\n");
 
 	// Delete all the .o files in the obj folder
-	int code = system("rm -f "OBJ_FOLDER"/*.o");
+	int code = system("rm -rf "OBJ_FOLDER"/**/*.o");
 	if (code != 0) {
 		perror("Error while deleting the .o files\n");
 		return -1;
@@ -108,6 +108,12 @@ int clean_project() {
 		perror("Error while deleting the .exe files\n");
 		return -1;
 	}
+
+	// Delete the .files_timestamps file
+	code = system("rm -f "FILES_TIMESTAMPS);
+
+	// Delete this file
+	code = system("rm -f maker.exe");
 
 	// Return
 	printf("Project cleaned!\n\n");
@@ -348,7 +354,6 @@ void create_folders_from_path(const char* filepath) {
 	free(folder);
 	return;
 }
-
 
 char* obj_files = NULL;
 int obj_files_size = 0;
@@ -607,6 +612,7 @@ int compile_programs() {
 }
 
 
+
 /**
  * @brief Program that compiles the entire project
  * 
@@ -618,7 +624,7 @@ int compile_programs() {
 int main(int argc, char **argv) {
 
 	// Print the header
-	printf("\n");
+	system("clear");
 
 	// Check if the user wants to clean the project
 	if (argc == 2 && strcmp(argv[1], "clean") == 0)

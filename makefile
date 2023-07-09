@@ -26,10 +26,8 @@ init:
 
 clean:
 	@./maker.exe clean
-	@rm -f maker.exe
 
 restart:
-	@clear
 	@make clean --no-print-directory
 	@make init --no-print-directory
 
