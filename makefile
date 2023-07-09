@@ -1,16 +1,17 @@
 
 ####################################################################################################
-# Makefile for the project "MachineLearningFromScratch".
-# Made for Windows 10, but should work on Linux and MacOS
+# Universal Makefile for C projects
+# Made for Windows, Linux and MacOS
 ####################################################################################################
 #
 # This makefile handles the compilation of the project by doing the following instructions:
-# - Generate a makefile that handles the compilation of all the project
-# - Launch the generated makefile
+# - Recursively search for all .c files in src/ and subdirectories
+# - Compile all .c files into .o files if they have been modified or
+# their dependencies have been modified by checking timestamps
 #
-# The generated makefile will do the following instructions:
-# - Compile every file in the src folder recursively and put the object files in the "obj" folder
-# - Compile every file in the programs folder recursively and put the executable files in the "bin" folder
+# - Recursively search for all .c files in programs/
+# - Compile all .c files into executables if they have been modified or
+# their dependencies have been modified by checking timestamps
 #
 ####################################################################################################
 # Author: 	Stoupy51 (COLLIGNON Alexandre)
@@ -24,9 +25,8 @@ init:
 	@./maker.exe
 
 clean:
-	@make -f generated_makefile clean --no-print-directory
+	@./maker.exe clean
 	@rm -f maker.exe
-	@rm -f generated_makefile
 
 restart:
 	@clear
