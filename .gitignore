@@ -3,6 +3,7 @@ dependencies.txt
 *obj/*
 *bin/*
 *.o
+.files_timestamps
 
 # Ignore the build directory
 *.vs/
