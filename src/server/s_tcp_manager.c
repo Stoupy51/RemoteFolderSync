@@ -139,7 +139,11 @@ thread_return_type tcp_server_handle_new_connections(thread_param_type arg) {
 
 	// Handle parameters
 	int code = (arg == NULL) ? 0 : -1;
-	ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_server_handle_new_connections(): Invalid parameters, 'arg' should be NULL\n");
+	#ifdef _WIN32
+		ERROR_HANDLE_INT_RETURN_INT(code, "tcp_server_handle_new_connections(): Invalid parameters, 'arg' should be NULL\n");
+	#else
+		ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_server_handle_new_connections(): Invalid parameters, 'arg' should be NULL\n");
+	#endif
 
 	// Variables
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
@@ -155,7 +159,11 @@ thread_return_type tcp_server_handle_new_connections(thread_param_type arg) {
 		// Accept the connection
 		cl->socket = accept(g_server->handle_new_connections.socket, (struct sockaddr *)&cl->address, &client_addr_size);
 		code = cl->socket == INVALID_SOCKET ? -1 : 0;
-		ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_server_handle_new_connections(): Error while accepting a connection\n");
+		#ifdef _WIN32
+			ERROR_HANDLE_INT_RETURN_INT(code, "tcp_server_handle_new_connections(): Error while accepting a connection\n");
+		#else
+			ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_server_handle_new_connections(): Error while accepting a connection\n");
+		#endif
 		cl->id = g_server->clients_count;
 
 		// Get the client IP address and port
@@ -194,7 +202,11 @@ thread_return_type tcp_server_handle_client_requests(thread_param_type arg) {
 
 	// Handle parameters
 	int code = (arg == NULL) ? 0 : -1;
-	ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_server_handle_client_requests(): Invalid parameters, 'arg' should be NULL\n");
+	#ifdef _WIN32
+		ERROR_HANDLE_INT_RETURN_INT(code, "tcp_server_handle_client_requests(): Invalid parameters, 'arg' should be NULL\n");
+	#else
+		ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_server_handle_client_requests(): Invalid parameters, 'arg' should be NULL\n");
+	#endif
 
 	// Variables
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
@@ -209,7 +221,11 @@ thread_return_type tcp_server_handle_client_requests(thread_param_type arg) {
 		// Accept the connection
 		client.socket = accept(g_server->handle_client_requests.socket, (struct sockaddr *)&client.address, &client_addr_size);
 		code = (client.socket == INVALID_SOCKET) ? -1 : 0;
-		ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_server_handle_client_requests(): Error while accepting a connection\n");
+		#ifdef _WIN32
+			ERROR_HANDLE_INT_RETURN_INT(code, "tcp_server_handle_client_requests(): Error while accepting a connection\n");
+		#else
+			ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_server_handle_client_requests(): Error while accepting a connection\n");
+		#endif
 
 		// Get the client IP address and port
 		client.ip = inet_ntoa(client.address.sin_addr);

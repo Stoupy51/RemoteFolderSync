@@ -460,7 +460,7 @@ int findCFiles(str_linked_list_t *files_timestamps) {
 			char command[256];
 			sprintf(command, CC" -c \"%s\" -o \"%s\" "ALL_FLAGS, relative_path, obj_path);
 			printf("- %s\n", command);
-			if (system(command) < 0)
+			if (system(command) != 0)
 				return -1;
 
 			// If the file is not in the list, add it
