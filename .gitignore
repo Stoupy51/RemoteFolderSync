@@ -4,6 +4,7 @@ dependencies.txt
 *bin/*
 *.o
 .files_timestamps
+maker.exe
 
 # Ignore the build directory
 *.vs/
