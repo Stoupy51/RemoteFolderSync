@@ -90,6 +90,13 @@ void str_linked_list_free(str_linked_list_t* list) {
 #define COMPILER_FLAGS "-Wall -Wextra -Wpedantic -Werror -O3"
 #define ALL_FLAGS COMPILER_FLAGS " " LINKER_FLAGS
 
+// Global variables
+char* additional_flags = NULL;
+char* linking_flags = NULL;
+char* obj_files = NULL;
+int obj_files_size = 0;
+str_linked_list_t files_timestamps;
+
 /**
  * @brief Clean the project by deleting all the .o and .exe files in their respective folders
  * 
@@ -358,8 +365,6 @@ void create_folders_from_path(const char* filepath) {
 	return;
 }
 
-char* obj_files = NULL;
-int obj_files_size = 0;
 
 /**
  * @brief Find all the .c files in the src folder recursively,
@@ -457,11 +462,20 @@ int findCFiles(str_linked_list_t *files_timestamps) {
 			create_folders_from_path(obj_path);
 
 			// Compile the file
-			char command[256];
-			sprintf(command, CC" -c \"%s\" -o \"%s\" "ALL_FLAGS, relative_path, obj_path);
+			char command[1024];
+			sprintf(
+				command,
+				CC" -c \"%s\" -o \"%s\" %s",
+
+				relative_path,
+				obj_path,
+				additional_flags == NULL ? "" : additional_flags
+			);
 			printf("- %s\n", command);
-			if (system(command) != 0)
-				return -1;
+			if (system(command) != 0) {
+				save_files_timestamps(*files_timestamps);
+				exit(-1);
+			}
 
 			// If the file is not in the list, add it
 			if (element == NULL)
@@ -489,8 +503,6 @@ int findCFiles(str_linked_list_t *files_timestamps) {
 	return 0;
 }
 
-str_linked_list_t files_timestamps;
-
 /**
  * @brief Compile all the .c files in the src folder recursively
  * For each file found, check if there is a change in the .c file or in the .h files included
@@ -508,10 +520,7 @@ int compile_sources() {
 	}
 
 	// For each .c file in the src folder,
-	if (findCFiles(&files_timestamps) != 0) {
-		perror("Error while finding the .c files\n");
-		return -1;
-	}
+	findCFiles(&files_timestamps);
 
 	// Save the last modification time of each file in the .files_timestamps file
 	if (save_files_timestamps(files_timestamps) != 0) {
@@ -573,10 +582,6 @@ int compile_programs() {
 		path.timestamp = getTimestampRecursive(filename);
 		str_linked_list_element_t* element = str_linked_list_search(files_timestamps, path);
 		if (element == NULL || element->path.timestamp != path.timestamp) {
-			if (element == NULL)
-				str_linked_list_insert(&files_timestamps, path);
-			else
-				element->path.timestamp = path.timestamp;
 
 			// Add "exe" at the end of the line
 			line[read - 2] = '\0';	// Remove the 'c' in ".c"
@@ -587,14 +592,29 @@ int compile_programs() {
 				printf("Compiling programs...\n");
 
 			// Compile the file
-			char command[256];
-			if (obj_files == NULL)
-				sprintf(command, CC" \"%s\" -o \"%s/%s\" "ALL_FLAGS, filename, BIN_FOLDER, line);
+			char command[1024];
+			sprintf(
+				command,
+				CC" \"%s\" -o \""BIN_FOLDER"/%s\" %s %s %s",
+
+				filename,
+				line,
+				obj_files == NULL ? "" : obj_files,
+				additional_flags == NULL ? "" : additional_flags,
+				linking_flags == NULL ? "" : linking_flags
+			);
+			char command_reduced[96];
+			memcpy(command_reduced, command, 95);
+			command_reduced[95] = '\0';
+			printf("- %s...\n", command_reduced);
+			if (system(command) != 0)
+				continue;
+			
+			// If the file is not in the list, add it
+			if (element == NULL)
+				str_linked_list_insert(&files_timestamps, path);
 			else
-				sprintf(command, CC" \"%s\" -o \"%s/%s\" %s"ALL_FLAGS, filename, BIN_FOLDER, line, obj_files);
-			printf("- %s\n", command);
-			if (system(command) < 0)
-				return -1;
+				element->path.timestamp = path.timestamp;
 		}
 	}
 
@@ -616,7 +636,6 @@ int compile_programs() {
 }
 
 
-
 /**
  * @brief Program that compiles the entire project
  * 
@@ -633,6 +652,10 @@ int main(int argc, char **argv) {
 	// Check if the user wants to clean the project
 	if (argc == 2 && strcmp(argv[1], "clean") == 0)
 		return clean_project();
+	else if (argc == 3) {
+		additional_flags = argv[1];
+		linking_flags = argv[2];
+	}
 
 	// Create folders if they don't exist
 	mkdir(SRC_FOLDER, 0777);

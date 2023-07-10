@@ -17,12 +17,16 @@
 # Author: 	Stoupy51 (COLLIGNON Alexandre)
 ####################################################################################################
 
+# Variables (Linking flags are only used for 'programs/*.c' files, because it only matters when cooking executables)
+ADDITIONAL_FLAGS = -Wall -Wextra -Wpedantic -Werror -O3 -lm -lpthread -lws2_32
+LINKING_FLAGS = ""
+
 all:
-	@./maker.exe
+	@./maker.exe "$(ADDITIONAL_FLAGS)" "$(LINKING_FLAGS)"
 
 init:
 	gcc maker.c -o maker.exe
-	@./maker.exe
+	@./maker.exe "$(ADDITIONAL_FLAGS)" "$(LINKING_FLAGS)"
 
 clean:
 	@./maker.exe clean
