@@ -213,6 +213,12 @@ int monitor_directory(const char *directory_path, file_created_handler file_crea
 					code = file_deleted(event->name);
 					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error in file_deleted_handler\n");
 				}
+
+				// If the file was renamed
+				if (event->mask & IN_MOVED_FROM) {
+					code = file_renamed(event->name, NULL);
+					ERROR_HANDLE_INT_RETURN_INT(code, "monitor_directory(): Error in file_renamed_handler\n");
+				}
 			}
 
 			// Move to the next event

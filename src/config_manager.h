@@ -9,7 +9,7 @@
 
 // Structure of the configuration file
 typedef struct {
-	char directory[1024];
+	char directory[512];
 	simple_string_t password;
 	char ip[16];
 	int port;

@@ -139,7 +139,7 @@ thread_return_type tcp_server_handle_new_connections(thread_param_type arg) {
 
 	// Handle parameters
 	int code = (arg == NULL) ? 0 : -1;
-	ERROR_HANDLE_INT_RETURN_INT(code, "tcp_server_handle_new_connections(): Invalid parameters, 'arg' should be NULL\n");
+	ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_server_handle_new_connections(): Invalid parameters, 'arg' should be NULL\n");
 
 	// Variables
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
@@ -155,7 +155,7 @@ thread_return_type tcp_server_handle_new_connections(thread_param_type arg) {
 		// Accept the connection
 		cl->socket = accept(g_server->handle_new_connections.socket, (struct sockaddr *)&cl->address, &client_addr_size);
 		code = cl->socket == INVALID_SOCKET ? -1 : 0;
-		ERROR_HANDLE_INT_RETURN_INT(code, "tcp_server_handle_new_connections(): Error while accepting a connection\n");
+		ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_server_handle_new_connections(): Error while accepting a connection\n");
 		cl->id = g_server->clients_count;
 
 		// Get the client IP address and port
@@ -194,7 +194,7 @@ thread_return_type tcp_server_handle_client_requests(thread_param_type arg) {
 
 	// Handle parameters
 	int code = (arg == NULL) ? 0 : -1;
-	ERROR_HANDLE_INT_RETURN_INT(code, "tcp_server_handle_client_requests(): Invalid parameters, 'arg' should be NULL\n");
+	ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_server_handle_client_requests(): Invalid parameters, 'arg' should be NULL\n");
 
 	// Variables
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
@@ -209,14 +209,12 @@ thread_return_type tcp_server_handle_client_requests(thread_param_type arg) {
 		// Accept the connection
 		client.socket = accept(g_server->handle_client_requests.socket, (struct sockaddr *)&client.address, &client_addr_size);
 		code = (client.socket == INVALID_SOCKET) ? -1 : 0;
-		ERROR_HANDLE_INT_RETURN_INT(code, "tcp_server_handle_client_requests(): Error while accepting a connection\n");
+		ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_server_handle_client_requests(): Error while accepting a connection\n");
 
 		// Get the client IP address and port
 		client.ip = inet_ntoa(client.address.sin_addr);
 		client.port = ntohs(client.address.sin_port);
 		INFO_PRINT("{%s:%d} Connection accepted\n", client.ip, client.port);
-
-		// TODO : Should run a thread for each client
 
 		// Receive the request
 		message_t message;
@@ -265,7 +263,7 @@ thread_return_type tcp_server_handle_client_requests(thread_param_type arg) {
 int sendAllDirectoryFiles(SOCKET client_socket) {
 
 	// Create the zip file
-	char command[1024];
+	char command[2048];
 	#ifdef _WIN32
 		sprintf(command, "powershell -Command \"Compress-Archive -Path '%s*' -DestinationPath '%s' -Force\"", g_server->config.directory, ZIP_TEMPORARY_FILE);
 	#else
@@ -336,7 +334,7 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 	int code = 0;
 
 	// Receive the file name
-	char filename[1024];
+	char filename[256];
 	memset(filename, 0, sizeof(filename));
 	code = socket_read(client.socket, filename, message->size, 0);
 	DECRYPT_BYTES(filename, message->size, g_server->config.password);
@@ -441,7 +439,7 @@ int handle_action_from_client(client_info_t client, message_t *message) {
 	DEBUG_PRINT("{%s:%d} Received new file name size '%zu'\n", client.ip, client.port, new_filename_size);
 
 	// Receive the new file name
-	char new_filename[1024];
+	char new_filename[256];
 	code = socket_read(client.socket, new_filename, sizeof(new_filename), 0) > 0 ? 0 : -1;
 	DECRYPT_BYTES(new_filename, sizeof(new_filename), g_server->config.password);
 	ERROR_HANDLE_INT_RETURN_INT(code, "{%s:%d} Error while receiving the new file name\n", client.ip, client.port);

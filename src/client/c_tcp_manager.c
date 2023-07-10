@@ -116,7 +116,7 @@ thread_return_type tcp_client_thread(thread_param_type arg) {
 
 	// Handle parameters
 	int code = (arg == NULL) ? 0 : -1;
-	ERROR_HANDLE_INT_RETURN_INT(code, "tcp_client_thread(): Invalid parameters, 'arg' should be NULL\n");
+	ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_client_thread(): Invalid parameters, 'arg' should be NULL\n");
 
 	// Variables
 	message_t message;
@@ -130,7 +130,7 @@ thread_return_type tcp_client_thread(thread_param_type arg) {
 	message.type = DISCONNECT;
 	ENCRYPT_BYTES(&message, sizeof(message_t), g_client->config.password);
 	code = socket_write(g_client->socket, &message, sizeof(message_t), 0) > 0 ? 0 : -1;
-	ERROR_HANDLE_INT_RETURN_INT(code, "tcp_client_thread(): Unable to send the disconnect message\n");
+	ERROR_HANDLE_INT_RETURN_NULL(code, "tcp_client_thread(): Unable to send the disconnect message\n");
 	INFO_PRINT("tcp_client_thread(): Disconnected from the server\n");
 
 	// Close the socket and return

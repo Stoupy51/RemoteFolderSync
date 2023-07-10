@@ -196,9 +196,13 @@ int file_accessible(char* path) {
  * @return size_t	Size of the file.
 */
 size_t get_file_size(int fd) {
-	struct stat64 st;
-	int code = fstat64(fd, &st);
-	return (code == 0) ? st.st_size : 0;
+	#ifdef _WIN32
+		return _filelength(fd);
+	#else
+		struct stat st = {0};
+		int code = fstat(fd, &st);
+		return (code == 0) ? st.st_size : 0;
+	#endif
 }
 
 /**

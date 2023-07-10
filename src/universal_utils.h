@@ -3,6 +3,8 @@
 #define __UTILS_H__
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef _WIN32
 	#include <windows.h>
@@ -15,6 +17,8 @@
 	#define stat64 _stat64
 #else
 	#include <unistd.h>
+	#include <errno.h>
+	#include <sys/stat.h>
 #endif
 
 
